@@ -40,15 +40,24 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             var uri = new Uri(databaseUrl);
             var username = uri.UserInfo.Split(':')[0];
             var password = uri.UserInfo.Split(':')[1];
-            var postgresConnectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.Substring(1)};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
             
-            Console.WriteLine($"PostgreSQL Host: {uri.Host}:{uri.Port}");
-            Console.WriteLine($"PostgreSQL Database: {uri.LocalPath.Substring(1)}");
+            // Use porta padrão do PostgreSQL (5432) se não especificada
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.LocalPath.TrimStart('/');
+            
+            var postgresConnectionString = $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+            
+            Console.WriteLine($"PostgreSQL Host: {uri.Host}:{port}");
+            Console.WriteLine($"PostgreSQL Database: {database}");
+            Console.WriteLine($"PostgreSQL Username: {username}");
+            Console.WriteLine($"Connection String (without password): Host={uri.Host};Port={port};Database={database};Username={username};SSL Mode=Require;Trust Server Certificate=true");
+            
             options.UseNpgsql(postgresConnectionString);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ ERROR parsing DATABASE_URL: {ex.Message}");
+            Console.WriteLine($"DATABASE_URL value: {databaseUrl}");
             Console.WriteLine("Falling back to SQLite...");
             var fallbackConnection = "Data Source=barbearia_fallback.db";
             options.UseSqlite(fallbackConnection);
