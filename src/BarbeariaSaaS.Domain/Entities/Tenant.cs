@@ -27,6 +27,9 @@ public class Tenant
     [StringLength(500)]
     public string? Address { get; set; }
     
+    [StringLength(500)]
+    public string? Website { get; set; }
+    
     public TenantBranding? Branding { get; set; }
     public TenantSettings? Settings { get; set; }
     

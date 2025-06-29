@@ -97,8 +97,29 @@ public static class TenantValidationService
         if (string.IsNullOrWhiteSpace(url))
             return true; // URL é opcional
 
-        return Uri.TryCreate(url, UriKind.Absolute, out var result) &&
-               (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+        // Normalizar URL adicionando https:// se não tiver protocolo
+        var normalizedUrl = url.Trim();
+        if (!normalizedUrl.StartsWith("http://") && !normalizedUrl.StartsWith("https://") && !normalizedUrl.StartsWith("ftp://"))
+        {
+            normalizedUrl = "https://" + normalizedUrl;
+        }
+
+        return Uri.TryCreate(normalizedUrl, UriKind.Absolute, out var result) &&
+               (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps || result.Scheme == Uri.UriSchemeFtp);
+    }
+
+    public static string NormalizeUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+
+        var normalizedUrl = url.Trim();
+        if (!normalizedUrl.StartsWith("http://") && !normalizedUrl.StartsWith("https://") && !normalizedUrl.StartsWith("ftp://"))
+        {
+            normalizedUrl = "https://" + normalizedUrl;
+        }
+
+        return normalizedUrl;
     }
 
     public static List<string> GetValidationErrors(string fieldName, string value, string fieldType)

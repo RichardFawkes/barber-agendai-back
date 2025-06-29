@@ -154,6 +154,7 @@ public class CreateTenantWithAdminCommandHandler : IRequestHandler<CreateTenantW
             Phone = tenantData.Phone,
             Email = tenantData.Email,
             Address = tenantData.Address,
+            Website = !string.IsNullOrEmpty(tenantData.Website) ? TenantValidationService.NormalizeUrl(tenantData.Website) : null,
             Status = TenantStatus.Active,
             Plan = SubscriptionPlan.Basic,
             CreatedAt = DateTime.UtcNow,
@@ -323,7 +324,7 @@ public class CreateTenantWithAdminCommandHandler : IRequestHandler<CreateTenantW
                     Email = tenant.Email ?? string.Empty,
                     Phone = tenant.Phone ?? string.Empty,
                     Address = tenant.Address ?? string.Empty,
-                    Website = tenant.Branding?.Logo?.Url,
+                    Website = tenant.Website,
                     Branding = new TenantBrandingResponseDto
                     {
                         Colors = new BrandingColorsResponseDto

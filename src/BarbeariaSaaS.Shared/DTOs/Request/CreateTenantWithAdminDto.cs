@@ -39,7 +39,6 @@ public class TenantDataDto
     [StringLength(500, MinimumLength = 10)]
     public string Address { get; set; } = string.Empty;
     
-    [Url]
     public string? Website { get; set; }
     
     public LogoDataDto? Logo { get; set; }
