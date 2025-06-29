@@ -212,13 +212,42 @@ using (var scope = app.Services.CreateScope())
         
         var databaseProvider = context.Database.ProviderName;
         
-        if (databaseProvider?.Contains("Sqlite") == true || databaseProvider?.Contains("Npgsql") == true)
+        if (databaseProvider?.Contains("Sqlite") == true)
         {
-            // SQLite e PostgreSQL - Use EnsureCreated (mais simples e confiável)
-            var dbType = databaseProvider.Contains("Sqlite") ? "SQLite" : "PostgreSQL";
-            logger.LogInformation("Using EnsureCreated for {DbType} database...", dbType);
+            // SQLite - Use EnsureCreated (mais simples e confiável)
+            logger.LogInformation("Using EnsureCreated for SQLite database...");
             await context.Database.EnsureCreatedAsync();
-            logger.LogInformation("✅ {DbType} database created/verified successfully", dbType);
+            logger.LogInformation("✅ SQLite database created/verified successfully");
+        }
+        else if (databaseProvider?.Contains("Npgsql") == true)
+        {
+            // PostgreSQL - Estratégia robusta: verificar se tabelas existem
+            logger.LogInformation("Setting up PostgreSQL database...");
+            
+            // Primeiro, verificar se o banco tem tabelas
+            bool hasAnyTables = false;
+            try
+            {
+                hasAnyTables = await context.Tenants.AnyAsync();
+            }
+            catch
+            {
+                // Se falhar, significa que as tabelas não existem
+                hasAnyTables = false;
+            }
+            
+            if (!hasAnyTables)
+            {
+                logger.LogInformation("PostgreSQL database is empty. Creating tables...");
+                // Forçar recriação completa para garantir que as tabelas sejam criadas
+                await context.Database.EnsureDeletedAsync();
+                await context.Database.EnsureCreatedAsync();
+                logger.LogInformation("✅ PostgreSQL database and tables created successfully");
+            }
+            else
+            {
+                logger.LogInformation("✅ PostgreSQL database already has tables");
+            }
         }
         else
         {
