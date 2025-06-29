@@ -212,16 +212,17 @@ using (var scope = app.Services.CreateScope())
         
         var databaseProvider = context.Database.ProviderName;
         
-        if (databaseProvider?.Contains("Sqlite") == true)
+        if (databaseProvider?.Contains("Sqlite") == true || databaseProvider?.Contains("Npgsql") == true)
         {
-            // SQLite - Use EnsureCreated (mais simples e confiável)
-            logger.LogInformation("Using EnsureCreated for SQLite database...");
+            // SQLite e PostgreSQL - Use EnsureCreated (mais simples e confiável)
+            var dbType = databaseProvider.Contains("Sqlite") ? "SQLite" : "PostgreSQL";
+            logger.LogInformation("Using EnsureCreated for {DbType} database...", dbType);
             await context.Database.EnsureCreatedAsync();
-            logger.LogInformation("✅ SQLite database created/verified successfully");
+            logger.LogInformation("✅ {DbType} database created/verified successfully", dbType);
         }
         else
         {
-            // PostgreSQL/SQL Server - Use Migrations
+            // SQL Server - Use Migrations
             logger.LogInformation("Applying migrations for {Provider}...", databaseProvider);
             await context.Database.MigrateAsync();
             logger.LogInformation("✅ Database migration completed successfully");
