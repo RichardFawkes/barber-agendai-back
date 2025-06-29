@@ -1,0 +1,132 @@
+# ===================================
+# DOCKER COMPOSE - BARBEARIA SAAS
+# Ambiente completo com API + SQL Server
+# ===================================
+
+version: '3.8'
+
+services:
+
+  # ===================================
+  # SQL SERVER
+  # ===================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: barbearia-saas-db
+    hostname: sqlserver
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=BarbeariaSaaS@2024!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - barbearia-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P BarbeariaSaaS@2024! -Q 'SELECT 1' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ===================================
+  # BARBEARIA SAAS API
+  # ===================================
+  barbearia-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    container_name: barbearia-saas-api
+    hostname: barbearia-api
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      # Configurações de ambiente
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      
+      # Connection String
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=BarbeariaSaaS;User Id=sa;Password=BarbeariaSaaS@2024!;TrustServerCertificate=true;MultipleActiveResultSets=true
+      
+      # JWT Settings
+      - JwtSettings__SecretKey=BarbeariaSaaS-Super-Secret-Key-256-Bits-For-JWT-Token-Security-Production-2024
+      - JwtSettings__Issuer=BarbeariaSaaS-Production
+      - JwtSettings__Audience=BarbeariaSaaS-Users-Production
+      - JwtSettings__ExpirationHours=24
+      
+      # Logging
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft=Warning
+      - Logging__LogLevel__Microsoft.Hosting.Lifetime=Information
+      
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - app_logs:/app/logs
+      - app_uploads:/app/uploads
+    networks:
+      - barbearia-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===================================
+  # REDIS (Opcional - para cache)
+  # ===================================
+  redis:
+    image: redis:7-alpine
+    container_name: barbearia-saas-redis
+    hostname: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - barbearia-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ===================================
+# VOLUMES
+# ===================================
+volumes:
+  sqlserver_data:
+    driver: local
+    name: barbearia-saas-sqlserver-data
+    
+  app_logs:
+    driver: local
+    name: barbearia-saas-logs
+    
+  app_uploads:
+    driver: local
+    name: barbearia-saas-uploads
+    
+  redis_data:
+    driver: local
+    name: barbearia-saas-redis-data
+
+# ===================================
+# NETWORKS
+# ===================================
+networks:
+  barbearia-network:
+    driver: bridge
+    name: barbearia-saas-network 
