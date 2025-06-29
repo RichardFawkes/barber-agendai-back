@@ -1,0 +1,17 @@
+{
+  "tenant": {
+    "name": "Barbearia Teste API",
+    "description": "Barbearia para teste do endpoint corrigido com MediatR",
+    "subdomain": "testeapi",
+    "phone": "(11) 99999-9999",
+    "email": "teste@barbeariaapi.com",
+    "address": "Rua de Teste da API, 123 - Centro, São Paulo - SP",
+    "website": "www.barbeariaapi.com.br"
+  },
+  "admin": {
+    "name": "Admin Teste API",
+    "email": "admin@barbeariaapi.com",
+    "phone": "(11) 98888-8888",
+    "password": "testeapi123"
+  }
+} 

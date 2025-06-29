@@ -105,7 +105,7 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // MediatR
-builder.Services.AddMediatR(typeof(BarbeariaSaaS.Application.Features.Auth.Commands.LoginCommand).Assembly);
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(BarbeariaSaaS.Application.Features.Auth.Commands.LoginCommand).Assembly));
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
