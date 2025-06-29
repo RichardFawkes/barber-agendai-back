@@ -23,6 +23,9 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Get database provider for conditional configurations
+        var databaseProvider = Database.ProviderName;
+
         // Tenant configuration
         modelBuilder.Entity<Tenant>(entity =>
         {
@@ -36,8 +39,24 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Address).HasMaxLength(500);
             entity.Property(e => e.Status).HasConversion<int>();
             entity.Property(e => e.Plan).HasConversion<int>();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps based on database provider
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                // SQLite and others
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             // Complex type configurations for Branding and Settings as JSON
             entity.Property(e => e.Branding)
@@ -45,14 +64,14 @@ public class ApplicationDbContext : DbContext
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
                     v => JsonSerializer.Deserialize<TenantBranding>(v, (JsonSerializerOptions)null!)!)
                 .HasColumnName("BrandingJson")
-                .HasColumnType("NVARCHAR(MAX)");
+                .HasColumnType(databaseProvider?.Contains("SqlServer") == true ? "NVARCHAR(MAX)" : "TEXT");
 
             entity.Property(e => e.Settings)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
                     v => JsonSerializer.Deserialize<TenantSettings>(v, (JsonSerializerOptions)null!)!)
                 .HasColumnName("SettingsJson")
-                .HasColumnType("NVARCHAR(MAX)");
+                .HasColumnType(databaseProvider?.Contains("SqlServer") == true ? "NVARCHAR(MAX)" : "TEXT");
         });
 
         // User configuration
@@ -66,7 +85,20 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.Role).HasConversion<int>();
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
@@ -88,7 +120,20 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Color).HasMaxLength(7);
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Services)
@@ -115,11 +160,28 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CustomerPhone).IsRequired().HasMaxLength(20);
             entity.Property(e => e.BookingDate).IsRequired().HasColumnType("DATE");
             entity.Property(e => e.BookingTime).IsRequired().HasColumnType("TIME");
-            entity.Property(e => e.Status).HasConversion<int>().HasDefaultValue(BookingStatus.Pending);
+            entity.Property(e => e.Status)
+                .HasConversion<int>()
+                .IsRequired();
             entity.Property(e => e.Notes).HasMaxLength(1000);
             entity.Property(e => e.ServicePrice).HasColumnType("decimal(10,2)").IsRequired();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Bookings)
@@ -149,7 +211,20 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Phone).IsRequired().HasMaxLength(20);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Customers)
@@ -203,7 +278,20 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.FileSize).IsRequired();
             entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.UploadedAt).HasDefaultValueSql("GETDATE()");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.UploadedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.UploadedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.UploadedAt).HasDefaultValueSql("datetime('now')");
+            }
 
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Files)
