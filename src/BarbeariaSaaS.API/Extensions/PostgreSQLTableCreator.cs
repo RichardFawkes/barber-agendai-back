@@ -39,9 +39,19 @@ public static class PostgreSQLTableCreator
                     ""Role"" INTEGER NOT NULL,
                     ""TenantId"" UUID NOT NULL,
                     ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE,
+                    ""LastLoginAt"" TIMESTAMP WITH TIME ZONE,
                     ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                     FOREIGN KEY (""TenantId"") REFERENCES ""Tenants""(""Id"") ON DELETE RESTRICT
                 );
+
+                -- Add LastLoginAt column to existing Users table if it doesn't exist
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name = 'Users' AND column_name = 'LastLoginAt') THEN
+                        ALTER TABLE ""Users"" ADD COLUMN ""LastLoginAt"" TIMESTAMP WITH TIME ZONE;
+                    END IF;
+                END $$;
 
                 -- Create ServiceCategories table
                 CREATE TABLE IF NOT EXISTS ""ServiceCategories"" (
