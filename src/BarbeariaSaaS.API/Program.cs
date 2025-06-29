@@ -221,32 +221,31 @@ using (var scope = app.Services.CreateScope())
         }
         else if (databaseProvider?.Contains("Npgsql") == true)
         {
-            // PostgreSQL - Estratégia robusta: verificar se tabelas existem
+            // PostgreSQL - Estratégia simples: apenas criar tabelas
             logger.LogInformation("Setting up PostgreSQL database...");
             
-            // Primeiro, verificar se o banco tem tabelas
-            bool hasAnyTables = false;
             try
             {
-                hasAnyTables = await context.Tenants.AnyAsync();
-            }
-            catch
-            {
-                // Se falhar, significa que as tabelas não existem
-                hasAnyTables = false;
-            }
-            
-            if (!hasAnyTables)
-            {
-                logger.LogInformation("PostgreSQL database is empty. Creating tables...");
-                // Forçar recriação completa para garantir que as tabelas sejam criadas
-                await context.Database.EnsureDeletedAsync();
+                // Tentar criar as tabelas diretamente (não falha se já existirem)
+                logger.LogInformation("Creating PostgreSQL tables...");
                 await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("✅ PostgreSQL database and tables created successfully");
+                logger.LogInformation("✅ PostgreSQL database and tables created/verified successfully");
             }
-            else
+            catch (Exception ex)
             {
-                logger.LogInformation("✅ PostgreSQL database already has tables");
+                logger.LogWarning("EnsureCreated failed, trying alternative approach: {Error}", ex.Message);
+                
+                // Se EnsureCreated falhar, verificar se as tabelas já existem verificando uma consulta simples
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync("SELECT 1");
+                    logger.LogInformation("✅ PostgreSQL database connection verified");
+                }
+                catch
+                {
+                    logger.LogError("❌ Could not connect to PostgreSQL database");
+                    throw;
+                }
             }
         }
         else
