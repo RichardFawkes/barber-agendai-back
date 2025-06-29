@@ -221,29 +221,29 @@ using (var scope = app.Services.CreateScope())
         }
         else if (databaseProvider?.Contains("Npgsql") == true)
         {
-            // PostgreSQL - Estratégia simples: apenas criar tabelas
-            logger.LogInformation("Setting up PostgreSQL database...");
+            // PostgreSQL - Usar migrations (mais confiável que EnsureCreated)
+            logger.LogInformation("Setting up PostgreSQL database with migrations...");
             
             try
             {
-                // Tentar criar as tabelas diretamente (não falha se já existirem)
-                logger.LogInformation("Creating PostgreSQL tables...");
-                await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("✅ PostgreSQL database and tables created/verified successfully");
+                // Primeiro, tentar aplicar migrations
+                logger.LogInformation("Applying PostgreSQL migrations...");
+                await context.Database.MigrateAsync();
+                logger.LogInformation("✅ PostgreSQL migrations applied successfully");
             }
             catch (Exception ex)
             {
-                logger.LogWarning("EnsureCreated failed, trying alternative approach: {Error}", ex.Message);
+                logger.LogWarning("Migrations failed, trying EnsureCreated: {Error}", ex.Message);
                 
-                // Se EnsureCreated falhar, verificar se as tabelas já existem verificando uma consulta simples
+                // Se migrations falharem, tentar EnsureCreated como fallback
                 try
                 {
-                    await context.Database.ExecuteSqlRawAsync("SELECT 1");
-                    logger.LogInformation("✅ PostgreSQL database connection verified");
+                    await context.Database.EnsureCreatedAsync();
+                    logger.LogInformation("✅ PostgreSQL database created via EnsureCreated");
                 }
-                catch
+                catch (Exception ex2)
                 {
-                    logger.LogError("❌ Could not connect to PostgreSQL database");
+                    logger.LogError("Both migrations and EnsureCreated failed: {Error}", ex2.Message);
                     throw;
                 }
             }

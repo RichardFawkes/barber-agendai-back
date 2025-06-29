@@ -10,6 +10,18 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context)
     {
+        // Verificar se as tabelas existem antes de tentar fazer seeding
+        try
+        {
+            // Tentar uma consulta simples para verificar se o banco está pronto
+            await context.Database.ExecuteSqlRawAsync("SELECT 1");
+        }
+        catch
+        {
+            // Se não conseguir nem fazer uma consulta simples, o banco não está pronto
+            return;
+        }
+
         // Verificar se o banco já foi populado (com tratamento para tabelas que podem não existir)
         try
         {
@@ -20,7 +32,7 @@ public static class DatabaseSeeder
         }
         catch
         {
-            // Tabelas podem não existir ainda, continuar com o seeding
+            // Tabelas podem não existir ainda, tentar criar dados mesmo assim
         }
 
         // Create test tenant
