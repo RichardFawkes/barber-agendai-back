@@ -221,7 +221,7 @@ using (var scope = app.Services.CreateScope())
         }
         else if (databaseProvider?.Contains("Npgsql") == true)
         {
-            // PostgreSQL - Forçar criação das tabelas
+            // PostgreSQL - Estratégia multi-layered para criação de tabelas
             logger.LogInformation("Setting up PostgreSQL database...");
             
             try
@@ -250,34 +250,54 @@ using (var scope = app.Services.CreateScope())
                 {
                     logger.LogInformation("Creating PostgreSQL database structure...");
                     
+                    // Estratégia 1: Tentar migrations primeiro
                     try
                     {
-                        // Tentar primeiro EnsureCreated
-                        logger.LogInformation("Attempting EnsureCreated...");
-                        var created = await context.Database.EnsureCreatedAsync();
-                        logger.LogInformation("EnsureCreated result: {Created}", created);
+                        logger.LogInformation("Attempting database migration...");
+                        await context.Database.MigrateAsync();
+                        logger.LogInformation("✅ Migrations applied successfully");
                         
-                        // Verificar se as tabelas foram criadas
-                        await Task.Delay(1000); // Aguardar um pouco
-                        var verifyCount = await context.Tenants.CountAsync();
-                        logger.LogInformation("✅ Tables created successfully, verification count: {Count}", verifyCount);
+                        // Verificar se funcionou
+                        await context.Tenants.CountAsync();
+                        logger.LogInformation("✅ Migration verification successful");
                     }
-                    catch (Exception ensureEx)
+                    catch (Exception migrateEx)
                     {
-                        logger.LogWarning("EnsureCreated failed: {Error}", ensureEx.Message);
+                        logger.LogWarning("Migrations failed: {Error}", migrateEx.Message);
                         
-                        // Fallback: tentar usar migrations
+                        // Estratégia 2: Tentar EnsureCreated
                         try
                         {
-                            logger.LogInformation("Trying migrations as fallback...");
-                            await context.Database.MigrateAsync();
-                            logger.LogInformation("✅ Migrations applied successfully");
+                            logger.LogInformation("Attempting EnsureCreated...");
+                            var created = await context.Database.EnsureCreatedAsync();
+                            logger.LogInformation("EnsureCreated result: {Created}", created);
+                            
+                            // Verificar se funcionou
+                            await context.Tenants.CountAsync();
+                            logger.LogInformation("✅ EnsureCreated verification successful");
                         }
-                        catch (Exception migrateEx)
+                        catch (Exception ensureEx)
                         {
-                            logger.LogError("Both EnsureCreated and Migrations failed. EnsureCreated: {EnsureError}, Migrations: {MigrateError}", 
-                                ensureEx.Message, migrateEx.Message);
-                            throw new Exception("Failed to create PostgreSQL database structure", migrateEx);
+                            logger.LogWarning("EnsureCreated failed: {Error}", ensureEx.Message);
+                            
+                            // Estratégia 3: Criação manual via SQL direto
+                            try
+                            {
+                                logger.LogInformation("Attempting manual table creation...");
+                                await PostgreSQLTableCreator.CreateTablesAsync(context, logger);
+                                
+                                // Verificar se funcionou
+                                await context.Tenants.CountAsync();
+                                logger.LogInformation("✅ Manual table creation successful");
+                            }
+                            catch (Exception manualEx)
+                            {
+                                logger.LogError("All PostgreSQL setup strategies failed:");
+                                logger.LogError("  Migration error: {MigrateError}", migrateEx.Message);
+                                logger.LogError("  EnsureCreated error: {EnsureError}", ensureEx.Message);
+                                logger.LogError("  Manual creation error: {ManualError}", manualEx.Message);
+                                throw new Exception("Failed to create PostgreSQL database structure with all strategies", manualEx);
+                            }
                         }
                     }
                 }
