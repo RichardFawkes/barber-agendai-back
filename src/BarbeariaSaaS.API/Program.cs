@@ -369,6 +369,112 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Welcome page at root URL
+app.MapGet("/", () => Results.Content($@"
+<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>BarbeariaSaaS API</title>
+    <style>
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }}
+        .container {{
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }}
+        h1 {{ color: white; text-align: center; margin-bottom: 30px; }}
+        .status {{ 
+            background: rgba(255, 255, 255, 0.2); 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+        }}
+        .endpoints {{ 
+            background: rgba(255, 255, 255, 0.1); 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+        }}
+        .endpoint {{ 
+            margin: 10px 0; 
+            padding: 10px; 
+            background: rgba(255, 255, 255, 0.1); 
+            border-radius: 5px; 
+        }}
+        a {{ color: #ffd700; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+        .version {{ text-align: center; margin-top: 30px; opacity: 0.8; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>🔥 BarbeariaSaaS API</h1>
+        
+        <div class='status'>
+            <h3>📊 Status do Sistema</h3>
+            <p>✅ API Online e Funcionando</p>
+            <p>🏢 Ambiente: Produção</p>
+            <p>🕒 Última atualização: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC</p>
+        </div>
+
+        <div class='endpoints'>
+            <h3>🚀 Links Importantes</h3>
+            <div class='endpoint'>
+                <strong>📖 Documentação da API:</strong><br>
+                <a href='/docs' target='_blank'>https://barber-agendai-back.onrender.com/docs</a>
+            </div>
+            <div class='endpoint'>
+                <strong>⚕️ Health Check:</strong><br>
+                <a href='/health' target='_blank'>https://barber-agendai-back.onrender.com/health</a>
+            </div>
+        </div>
+
+        <div class='endpoints'>
+            <h3>🔗 Principais Endpoints</h3>
+            <div class='endpoint'>
+                <strong>🏢 Barbearia por Subdomínio:</strong><br>
+                <code>GET /api/tenant/by-subdomain/{{subdomain}}</code>
+            </div>
+            <div class='endpoint'>
+                <strong>💇‍♂️ Serviços Públicos:</strong><br>
+                <code>GET /api/service/public/{{subdomain}}</code>
+            </div>
+            <div class='endpoint'>
+                <strong>📅 Agendamento Público:</strong><br>
+                <code>POST /api/booking/public/{{subdomain}}</code>
+            </div>
+            <div class='endpoint'>
+                <strong>🔐 Login:</strong><br>
+                <code>POST /api/auth/login</code>
+            </div>
+        </div>
+
+        <div class='endpoints'>
+            <h3>🛠️ Como Usar</h3>
+            <p>1. <strong>Para Sites Públicos:</strong> Use os endpoints públicos para criar sistemas de agendamento</p>
+            <p>2. <strong>Para Dashboards Admin:</strong> Faça login primeiro, depois use endpoints protegidos</p>
+            <p>3. <strong>Documentação Completa:</strong> Acesse <a href='/docs'>/docs</a> para ver todos os endpoints</p>
+        </div>
+        
+        <div class='version'>
+            <p>BarbeariaSaaS API v1.0 | Desenvolvido com ❤️ usando .NET 8</p>
+        </div>
+    </div>
+</body>
+</html>", "text/html"));
+
 // Health Check endpoint with detailed database info
 app.MapGet("/health", (IServiceProvider serviceProvider) => 
 {
