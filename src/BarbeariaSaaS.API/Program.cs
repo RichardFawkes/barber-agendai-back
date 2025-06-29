@@ -63,6 +63,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite(fallbackConnection);
         }
     }
+    else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Host="))
+    {
+        // PostgreSQL from appsettings.json ConnectionString
+        Console.WriteLine("✅ USING: PostgreSQL from appsettings.json");
+        Console.WriteLine($"Connection: {connectionString.Replace("Password=BGsAZxnqFJ51wy389QcOlaLk91SgzuGy", "Password=***")}");
+        options.UseNpgsql(connectionString);
+    }
     else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("localdb"))
     {
         // Local Development - SQL Server LocalDB (only if explicitly configured)
@@ -246,6 +253,64 @@ using (var scope = app.Services.CreateScope())
                     logger.LogInformation("Tables do not exist yet: {Error}", ex.Message);
                 }
                 
+                // SEMPRE verificar se as colunas faltantes existem (independente de tabelas existirem)
+                logger.LogInformation("Checking for missing columns in PostgreSQL tables...");
+                
+                // Lista de colunas que podem estar faltando
+                var missingColumns = new List<(string table, string column, string type)>();
+                
+                // Verificar coluna Website na tabela Tenants
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(
+                        @"SELECT COUNT(*) FROM ""Tenants"" WHERE ""Website"" IS NOT NULL");
+                    logger.LogInformation("✅ Website column exists in Tenants");
+                }
+                catch (Exception)
+                {
+                    missingColumns.Add(("Tenants", "Website", "VARCHAR(500) NULL"));
+                    logger.LogWarning("❌ Website column missing from Tenants table");
+                }
+                
+                // Verificar coluna LastLoginAt na tabela Users
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(
+                        @"SELECT COUNT(*) FROM ""Users"" WHERE ""LastLoginAt"" IS NOT NULL");
+                    logger.LogInformation("✅ LastLoginAt column exists in Users");
+                }
+                catch (Exception)
+                {
+                    missingColumns.Add(("Users", "LastLoginAt", "TIMESTAMP WITH TIME ZONE NULL"));
+                    logger.LogWarning("❌ LastLoginAt column missing from Users table");
+                }
+                
+                // Adicionar todas as colunas faltantes
+                if (missingColumns.Any())
+                {
+                    logger.LogInformation("Adding {Count} missing columns to PostgreSQL database...", missingColumns.Count);
+                    
+                    foreach (var (table, column, type) in missingColumns)
+                    {
+                        try
+                        {
+                            var sql = $@"ALTER TABLE ""{table}"" ADD COLUMN ""{column}"" {type}";
+                            await context.Database.ExecuteSqlRawAsync(sql);
+                            logger.LogInformation("✅ Added column {Column} to {Table} table", column, table);
+                        }
+                        catch (Exception addEx)
+                        {
+                            logger.LogError("❌ Failed to add column {Column} to {Table}: {Error}", column, table, addEx.Message);
+                        }
+                    }
+                    
+                    logger.LogInformation("✅ Finished adding missing columns");
+                }
+                else
+                {
+                    logger.LogInformation("✅ All required columns exist in database");
+                }
+                
                 if (!tableExists)
                 {
                     logger.LogInformation("Creating PostgreSQL database structure...");
@@ -254,8 +319,21 @@ using (var scope = app.Services.CreateScope())
                     try
                     {
                         logger.LogInformation("Attempting database migration...");
-                        await context.Database.MigrateAsync();
-                        logger.LogInformation("✅ Migrations applied successfully");
+                        
+                        // Verificar migrations pendentes
+                        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+                        if (pendingMigrations.Any())
+                        {
+                            logger.LogInformation("Found {Count} pending migrations: {Migrations}", 
+                                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+                            
+                            await context.Database.MigrateAsync();
+                            logger.LogInformation("✅ Migrations applied successfully");
+                        }
+                        else
+                        {
+                            logger.LogInformation("No pending migrations found");
+                        }
                         
                         // Verificar se funcionou
                         await context.Tenants.CountAsync();
