@@ -3,6 +3,7 @@ using System.Text;
 using BarbeariaSaaS.Domain.Entities;
 using BarbeariaSaaS.Infrastructure.Data;
 using BarbeariaSaaS.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace BarbeariaSaaS.API.Extensions;
 
@@ -10,30 +11,89 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context)
     {
+        var databaseProvider = context.Database.ProviderName;
+        
         // Verificar se as tabelas existem antes de tentar fazer seeding
         try
         {
-            // Tentar uma consulta simples para verificar se o banco está pronto
-            await context.Database.ExecuteSqlRawAsync("SELECT 1");
+            // Verificação específica por provider de banco de dados
+            bool tablesExist = false;
+            
+            if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                // PostgreSQL - verificar usando information_schema
+                try
+                {
+                    var result = await context.Database.ExecuteSqlRawAsync(@"
+                        SELECT COUNT(*) FROM information_schema.tables 
+                        WHERE table_name IN ('Tenants', 'Users', 'Services') 
+                        AND table_schema = 'public'");
+                    tablesExist = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"PostgreSQL table check failed: {ex.Message}");
+                    return;
+                }
+            }
+            else if (databaseProvider?.Contains("Sqlite") == true)
+            {
+                // SQLite - verificar usando sqlite_master
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync("SELECT name FROM sqlite_master WHERE type='table' AND name='Tenants'");
+                    tablesExist = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"SQLite table check failed: {ex.Message}");
+                    return;
+                }
+            }
+            else
+            {
+                // SQL Server - verificar usando sys.tables
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM sys.tables WHERE name = 'Tenants'");
+                    tablesExist = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"SQL Server table check failed: {ex.Message}");
+                    return;
+                }
+            }
+            
+            if (!tablesExist)
+            {
+                Console.WriteLine("Tables do not exist yet, skipping seeding");
+                return;
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Se não conseguir nem fazer uma consulta simples, o banco não está pronto
+            Console.WriteLine($"Database table verification failed: {ex.Message}");
             return;
         }
 
-        // Verificar se o banco já foi populado (com tratamento para tabelas que podem não existir)
+        // Verificar se o banco já foi populado
         try
         {
-            if (context.Tenants.Any())
+            var existingTenants = await context.Tenants.CountAsync();
+            if (existingTenants > 0)
             {
+                Console.WriteLine("Database already seeded, skipping");
                 return; // Database already seeded
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Tabelas podem não existir ainda, tentar criar dados mesmo assim
+            Console.WriteLine($"Error checking existing data: {ex.Message}");
+            return;
         }
+
+        Console.WriteLine("Starting database seeding...");
 
         // Create test tenant
         var tenant = new Tenant
@@ -94,7 +154,17 @@ public static class DatabaseSeeder
             }
         };
 
-        context.Tenants.Add(tenant);
+        try
+        {
+            context.Tenants.Add(tenant);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Tenant created successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating tenant: {ex.Message}");
+            return;
+        }
 
         // Create hash for password "admin123"
         var hashedPassword = HashPassword("admin123");
@@ -113,7 +183,17 @@ public static class DatabaseSeeder
             CreatedAt = DateTime.UtcNow
         };
 
-        context.Users.Add(adminUser);
+        try
+        {
+            context.Users.Add(adminUser);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Admin user created successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating admin user: {ex.Message}");
+            return;
+        }
 
         // Create service category
         var category = new ServiceCategory
@@ -125,8 +205,17 @@ public static class DatabaseSeeder
             IsActive = true
         };
 
-        context.ServiceCategories.Add(category);
-        await context.SaveChangesAsync(); // Save to get category ID
+        try
+        {
+            context.ServiceCategories.Add(category);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Service category created successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating service category: {ex.Message}");
+            return;
+        }
 
         // Create services
         var services = new List<Service>
@@ -172,7 +261,17 @@ public static class DatabaseSeeder
             }
         };
 
-        context.Services.AddRange(services);
+        try
+        {
+            context.Services.AddRange(services);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Services created successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating services: {ex.Message}");
+            return;
+        }
 
         // Create test customers
         var customers = new List<Customer>
@@ -197,7 +296,17 @@ public static class DatabaseSeeder
             }
         };
 
-        context.Customers.AddRange(customers);
+        try
+        {
+            context.Customers.AddRange(customers);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Customers created successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating customers: {ex.Message}");
+            return;
+        }
 
         // Create test bookings
         var tomorrow = DateTime.Today.AddDays(1);
@@ -238,9 +347,17 @@ public static class DatabaseSeeder
             }
         };
 
-        context.Bookings.AddRange(bookings);
-
-        await context.SaveChangesAsync();
+        try
+        {
+            context.Bookings.AddRange(bookings);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✅ Bookings created successfully");
+            Console.WriteLine("🎉 Database seeding completed successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating bookings: {ex.Message}");
+        }
     }
 
     private static string HashPassword(string password)

@@ -221,31 +221,55 @@ using (var scope = app.Services.CreateScope())
         }
         else if (databaseProvider?.Contains("Npgsql") == true)
         {
-            // PostgreSQL - Usar migrations (mais confiável que EnsureCreated)
-            logger.LogInformation("Setting up PostgreSQL database with migrations...");
+            // PostgreSQL - Forçar criação das tabelas
+            logger.LogInformation("Setting up PostgreSQL database...");
             
             try
             {
-                // Primeiro, tentar aplicar migrations
-                logger.LogInformation("Applying PostgreSQL migrations...");
-                await context.Database.MigrateAsync();
-                logger.LogInformation("✅ PostgreSQL migrations applied successfully");
+                // Verificar se o banco de dados pode ser acessado
+                logger.LogInformation("Testing PostgreSQL connection...");
+                await context.Database.CanConnectAsync();
+                logger.LogInformation("✅ PostgreSQL connection successful");
+                
+                // Verificar se as tabelas já existem
+                logger.LogInformation("Checking if tables exist...");
+                var tableExists = false;
+                try
+                {
+                    var result = await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM information_schema.tables WHERE table_name = 'Tenants' LIMIT 1");
+                    tableExists = true;
+                    logger.LogInformation("✅ Tables already exist");
+                }
+                catch
+                {
+                    logger.LogInformation("Tables do not exist yet");
+                }
+                
+                if (!tableExists)
+                {
+                    logger.LogInformation("Creating PostgreSQL database structure...");
+                    
+                    // Forçar criação do banco usando EnsureCreated
+                    await context.Database.EnsureCreatedAsync();
+                    logger.LogInformation("✅ PostgreSQL database created successfully");
+                    
+                    // Verificar se as tabelas foram criadas
+                    try
+                    {
+                        await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM \"Tenants\" LIMIT 1");
+                        logger.LogInformation("✅ Tables verification successful");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError("❌ Table verification failed: {Error}", ex.Message);
+                        throw new Exception("Failed to create PostgreSQL tables", ex);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                logger.LogWarning("Migrations failed, trying EnsureCreated: {Error}", ex.Message);
-                
-                // Se migrations falharem, tentar EnsureCreated como fallback
-                try
-                {
-                    await context.Database.EnsureCreatedAsync();
-                    logger.LogInformation("✅ PostgreSQL database created via EnsureCreated");
-                }
-                catch (Exception ex2)
-                {
-                    logger.LogError("Both migrations and EnsureCreated failed: {Error}", ex2.Message);
-                    throw;
-                }
+                logger.LogError("❌ PostgreSQL setup failed: {Error}", ex.Message);
+                throw new Exception("PostgreSQL database setup failed", ex);
             }
         }
         else
@@ -256,7 +280,7 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("✅ Database migration completed successfully");
         }
         
-        // Seed data
+        // Seed data with improved error handling
         logger.LogInformation("Starting database seeding...");
         await DatabaseSeeder.SeedAsync(context);
         logger.LogInformation("✅ Database seeding completed successfully");
