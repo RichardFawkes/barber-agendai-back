@@ -102,15 +102,6 @@ public class CreateTenantWithAdminCommandHandler : IRequestHandler<CreateTenantW
         if (subdomainErrors.Any())
             errors["tenant.subdomain"] = subdomainErrors;
 
-        // Validar telefones
-        var tenantPhoneErrors = TenantValidationService.GetValidationErrors("phone", request.Tenant.Phone, "phone");
-        if (tenantPhoneErrors.Any())
-            errors["tenant.phone"] = tenantPhoneErrors;
-
-        var adminPhoneErrors = TenantValidationService.GetValidationErrors("phone", request.Admin.Phone, "phone");
-        if (adminPhoneErrors.Any())
-            errors["admin.phone"] = adminPhoneErrors;
-
         // Validar emails
         var tenantEmailErrors = TenantValidationService.GetValidationErrors("email", request.Tenant.Email, "email");
         if (tenantEmailErrors.Any())

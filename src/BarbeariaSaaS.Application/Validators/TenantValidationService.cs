@@ -142,11 +142,6 @@ public static class TenantValidationService
                 }
                 break;
 
-            case "phone":
-                if (!IsValidBrazilianPhone(value))
-                    errors.Add("Formato de telefone inválido. Use: (11) 99999-9999");
-                break;
-
             case "email":
                 if (!IsValidEmail(value))
                     errors.Add("Formato de email inválido");
