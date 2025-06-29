@@ -38,7 +38,7 @@ public class CreateServiceCommandHandler : IRequestHandler<CreateServiceCommand,
             Name = service.Name,
             Description = service.Description,
             Price = service.Price,
-            DurationMinutes = service.DurationMinutes,
+            Duration = service.DurationMinutes,
             Color = service.Color,
             IsActive = service.IsActive
         };

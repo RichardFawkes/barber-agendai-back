@@ -153,7 +153,7 @@ public class ServiceController : ControllerBase
             }
 
             // Para admin, mostrar todos os serviços (ativos e inativos)
-            var services = await _unitOfWork.Services.GetByTenantIdAsync(parsedTenantId);
+            var services = await _unitOfWork.Services.FindAsync(s => s.TenantId == parsedTenantId);
             
             var result = services.Select(s => new ServiceDto
             {
@@ -161,7 +161,7 @@ public class ServiceController : ControllerBase
                 Name = s.Name,
                 Description = s.Description,
                 Price = s.Price,
-                DurationMinutes = s.DurationMinutes,
+                Duration = s.DurationMinutes,
                 Color = s.Color,
                 IsActive = s.IsActive
             });

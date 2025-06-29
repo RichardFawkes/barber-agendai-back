@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using BarbeariaSaaS.Application.Interfaces;
 using BarbeariaSaaS.Shared.DTOs.Response;
 using BarbeariaSaaS.Domain.Entities;
@@ -17,46 +16,67 @@ public class GetBookingsQueryHandler : IRequestHandler<GetBookingsQuery, IEnumer
 
     public async Task<IEnumerable<BookingDto>> Handle(GetBookingsQuery request, CancellationToken cancellationToken)
     {
-        var query = _unitOfWork.Context.Bookings
-            .Include(b => b.Service)
-            .Include(b => b.Customer)
-            .Where(b => b.TenantId == request.TenantId);
-
+        // Obter todos os agendamentos do tenant
+        var allBookings = await _unitOfWork.Bookings.FindAsync(b => b.TenantId == request.TenantId);
+        
         // Aplicar filtros
+        var filteredBookings = allBookings.AsEnumerable();
+
         if (request.StartDate.HasValue)
         {
-            query = query.Where(b => b.Date >= request.StartDate.Value);
+            var startDateTime = request.StartDate.Value.ToDateTime(TimeOnly.MinValue);
+            filteredBookings = filteredBookings.Where(b => b.BookingDate.Date >= startDateTime.Date);
         }
 
         if (request.EndDate.HasValue)
         {
-            query = query.Where(b => b.Date <= request.EndDate.Value);
+            var endDateTime = request.EndDate.Value.ToDateTime(TimeOnly.MinValue);
+            filteredBookings = filteredBookings.Where(b => b.BookingDate.Date <= endDateTime.Date);
         }
 
         if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<BookingStatus>(request.Status, true, out var status))
         {
-            query = query.Where(b => b.Status == status);
+            filteredBookings = filteredBookings.Where(b => b.Status == status);
         }
 
-        var bookings = await query
-            .OrderByDescending(b => b.Date)
-            .ThenByDescending(b => b.Time)
-            .ToListAsync(cancellationToken);
+        // Ordenar por data e hora
+        var bookings = filteredBookings
+            .OrderByDescending(b => b.BookingDate)
+            .ThenByDescending(b => b.BookingTime)
+            .ToList();
 
-        return bookings.Select(b => new BookingDto
+        // Mapear para DTO
+        var result = new List<BookingDto>();
+        
+        foreach (var booking in bookings)
         {
-            Id = b.Id.ToString(),
-            Date = b.Date.ToString("yyyy-MM-dd"),
-            Time = TimeOnly.FromTimeSpan(b.Time).ToString("HH:mm"),
-            Status = b.Status.ToString().ToLower(),
-            CustomerName = b.Customer?.Name ?? "Cliente não informado",
-            CustomerEmail = b.Customer?.Email ?? "",
-            CustomerPhone = b.Customer?.Phone ?? "",
-            ServiceName = b.Service?.Name ?? "Serviço não informado",
-            ServicePrice = b.Service?.Price ?? 0,
-            ServiceDuration = b.Service?.DurationMinutes ?? 0,
-            Notes = b.Notes,
-            CreatedAt = b.CreatedAt
-        });
+            // Obter serviço
+            var service = await _unitOfWork.Services.GetByIdAsync(booking.ServiceId);
+            
+            // Obter customer
+            Customer? customer = null;
+            if (booking.CustomerId.HasValue)
+            {
+                customer = await _unitOfWork.Customers.GetByIdAsync(booking.CustomerId.Value);
+            }
+
+            result.Add(new BookingDto
+            {
+                Id = booking.Id.ToString(),
+                Date = DateOnly.FromDateTime(booking.BookingDate).ToString("yyyy-MM-dd"),
+                Time = TimeOnly.FromTimeSpan(booking.BookingTime).ToString("HH:mm"),
+                Status = booking.Status.ToString().ToLower(),
+                CustomerName = customer?.Name ?? booking.CustomerName,
+                CustomerEmail = customer?.Email ?? booking.CustomerEmail,
+                CustomerPhone = customer?.Phone ?? booking.CustomerPhone,
+                ServiceName = service?.Name ?? "Serviço não informado",
+                ServicePrice = service?.Price ?? booking.ServicePrice,
+                ServiceDuration = service?.DurationMinutes ?? 0,
+                Notes = booking.Notes,
+                CreatedAt = booking.CreatedAt
+            });
+        }
+
+        return result;
     }
 } 
