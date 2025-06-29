@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Sistema de Agendamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .time-button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 5px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .time-button:hover {
+            background: #f0f0f0;
+        }
+        .time-button.selected {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .submit-btn {
+            background: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste Sistema de Agendamento</h1>
+        
+        <div class="info">
+            <strong>📡 API Base:</strong> http://localhost:5080<br>
+            <strong>🏪 Subdomain de teste:</strong> tiopatinhas (se existir)
+        </div>
+
+        <div id="message"></div>
+
+        <form id="bookingForm">
+            <div class="form-group">
+                <label>Subdomain da Barbearia:</label>
+                <input type="text" id="subdomain" value="tiopatinhas" placeholder="Ex: tiopatinhas">
+                <button type="button" onclick="loadBarbearia()" style="margin-top: 10px; padding: 5px 15px;">🔍 Carregar Barbearia</button>
+            </div>
+
+            <div id="tenantInfo" style="display: none;">
+                <h3 id="tenantName"></h3>
+                <p id="tenantDescription"></p>
+            </div>
+
+            <div class="form-group">
+                <label>Serviço:</label>
+                <select id="serviceSelect" onchange="loadAvailableTimes()">
+                    <option value="">Carregue a barbearia primeiro</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Data:</label>
+                <input type="date" id="dateInput" onchange="loadAvailableTimes()" min="">
+            </div>
+
+            <div class="form-group" id="timesContainer" style="display: none;">
+                <label>Horários Disponíveis:</label>
+                <div id="timeGrid" class="time-grid"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Nome do Cliente:</label>
+                <input type="text" id="customerName" placeholder="João Silva" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email do Cliente:</label>
+                <input type="email" id="customerEmail" placeholder="joao@email.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>Telefone do Cliente:</label>
+                <input type="tel" id="customerPhone" placeholder="11999887766" required>
+            </div>
+
+            <div class="form-group">
+                <label>Observações (opcional):</label>
+                <textarea id="notes" rows="3" placeholder="Alguma observação especial..."></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                📅 Confirmar Agendamento
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5080';
+        let selectedTime = '';
+        let availableTimes = [];
+        let services = [];
+
+        // Set minimum date to today
+        document.getElementById('dateInput').min = new Date().toISOString().split('T')[0];
+
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="${type}">${text}</div>`;
+            setTimeout(() => messageDiv.innerHTML = '', 5000);
+        }
+
+        async function loadBarbearia() {
+            const subdomain = document.getElementById('subdomain').value.trim();
+            if (!subdomain) {
+                showMessage('Digite um subdomínio válido', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Carregando informações da barbearia...', 'loading');
+
+                // Load tenant info
+                const tenantResponse = await fetch(`${API_BASE}/api/tenant/by-subdomain/${subdomain}`);
+                if (!tenantResponse.ok) {
+                    throw new Error(`Barbearia não encontrada: ${tenantResponse.status}`);
+                }
+                const tenant = await tenantResponse.json();
+
+                // Load services
+                const servicesResponse = await fetch(`${API_BASE}/api/service/public/${subdomain}`);
+                if (!servicesResponse.ok) {
+                    throw new Error(`Erro ao carregar serviços: ${servicesResponse.status}`);
+                }
+                services = await servicesResponse.json();
+
+                // Update UI
+                document.getElementById('tenantName').textContent = tenant.name;
+                document.getElementById('tenantDescription').textContent = tenant.description || '';
+                document.getElementById('tenantInfo').style.display = 'block';
+
+                // Populate services
+                const serviceSelect = document.getElementById('serviceSelect');
+                serviceSelect.innerHTML = '<option value="">Selecione um serviço</option>';
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = `${service.name} - R$ ${service.price.toFixed(2)} (${service.duration}min)`;
+                    serviceSelect.appendChild(option);
+                });
+
+                showMessage(`✅ Barbearia "${tenant.name}" carregada com sucesso!`, 'success');
+            } catch (error) {
+                console.error('Erro:', error);
+                showMessage(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadAvailableTimes() {
+            const subdomain = document.getElementById('subdomain').value.trim();
+            const serviceId = document.getElementById('serviceSelect').value;
+            const date = document.getElementById('dateInput').value;
+
+            if (!subdomain || !serviceId || !date) {
+                document.getElementById('timesContainer').style.display = 'none';
+                return;
+            }
+
+            try {
+                showMessage('Carregando horários disponíveis...', 'loading');
+
+                const response = await fetch(`${API_BASE}/api/booking/available-times/${subdomain}?serviceId=${serviceId}&date=${date}`);
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar horários: ${response.status}`);
+                }
+
+                availableTimes = await response.json();
+
+                // Update time grid
+                const timeGrid = document.getElementById('timeGrid');
+                timeGrid.innerHTML = '';
+
+                if (availableTimes.length === 0) {
+                    timeGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">Nenhum horário disponível</p>';
+                } else {
+                    availableTimes.forEach(time => {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'time-button';
+                        button.textContent = time;
+                        button.onclick = () => selectTime(time);
+                        timeGrid.appendChild(button);
+                    });
+                }
+
+                document.getElementById('timesContainer').style.display = 'block';
+                selectedTime = '';
+                updateSubmitButton();
+
+                showMessage(`✅ ${availableTimes.length} horários disponíveis carregados!`, 'success');
+            } catch (error) {
+                console.error('Erro:', error);
+                showMessage(`❌ Erro: ${error.message}`, 'error');
+                document.getElementById('timesContainer').style.display = 'none';
+            }
+        }
+
+        function selectTime(time) {
+            selectedTime = time;
+            
+            // Update button styles
+            document.querySelectorAll('.time-button').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.textContent === time) {
+                    btn.classList.add('selected');
+                }
+            });
+
+            updateSubmitButton();
+        }
+
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submitBtn');
+            const canSubmit = selectedTime && 
+                            document.getElementById('customerName').value &&
+                            document.getElementById('customerEmail').value &&
+                            document.getElementById('customerPhone').value;
+            
+            submitBtn.disabled = !canSubmit;
+        }
+
+        // Update submit button when customer data changes
+        ['customerName', 'customerEmail', 'customerPhone'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateSubmitButton);
+        });
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const subdomain = document.getElementById('subdomain').value.trim();
+            const serviceId = document.getElementById('serviceSelect').value;
+            const date = document.getElementById('dateInput').value;
+
+            const bookingData = {
+                serviceId: serviceId,
+                customerName: document.getElementById('customerName').value,
+                customerEmail: document.getElementById('customerEmail').value,
+                customerPhone: document.getElementById('customerPhone').value,
+                date: date,
+                time: selectedTime,
+                notes: document.getElementById('notes').value
+            };
+
+            try {
+                showMessage('Criando agendamento...', 'loading');
+
+                const response = await fetch(`${API_BASE}/api/booking/public/${subdomain}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Erro ${response.status}: ${errorData}`);
+                }
+
+                const result = await response.json();
+                
+                showMessage(`🎉 Agendamento criado com sucesso! ID: ${result.id}`, 'success');
+
+                // Reset form
+                document.getElementById('bookingForm').reset();
+                document.getElementById('timesContainer').style.display = 'none';
+                selectedTime = '';
+                updateSubmitButton();
+
+            } catch (error) {
+                console.error('Erro:', error);
+                showMessage(`❌ Erro ao criar agendamento: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 

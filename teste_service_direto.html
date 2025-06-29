@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API de Serviços</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .result { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #fee; color: #c33; }
+        .success { background: #efe; color: #363; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste API de Serviços</h1>
+    <p><strong>API Base:</strong> http://localhost:5080</p>
+    
+    <button onclick="testGetPublicServices()">📋 Testar GET Serviços Públicos</button>
+    <button onclick="testCreateService()">➕ Testar POST Criar Serviço</button>
+    <button onclick="testGetTenant()">🏪 Testar GET Tenant</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5080';
+        
+        function showResult(title, data, isError = false) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            results.appendChild(div);
+        }
+
+        async function testGetTenant() {
+            try {
+                console.log('🔍 Testando GET tenant...');
+                const response = await fetch(`${API_BASE}/api/tenant/by-subdomain/joao`);
+                const data = await response.json();
+                showResult('✅ GET Tenant (joao)', { status: response.status, data });
+            } catch (error) {
+                showResult('❌ Erro GET Tenant', { error: error.message }, true);
+            }
+        }
+
+        async function testGetPublicServices() {
+            try {
+                console.log('🔍 Testando GET serviços públicos...');
+                const response = await fetch(`${API_BASE}/api/service/public/joao`);
+                const data = await response.json();
+                showResult('✅ GET Serviços Públicos (joao)', { status: response.status, data });
+            } catch (error) {
+                showResult('❌ Erro GET Serviços Públicos', { error: error.message }, true);
+            }
+        }
+
+        async function testCreateService() {
+            try {
+                console.log('🔍 Testando POST criar serviço...');
+                
+                // Primeiro obter o tenant para pegar o ID correto
+                const tenantResponse = await fetch(`${API_BASE}/api/tenant/by-subdomain/joao`);
+                const tenant = await tenantResponse.json();
+                
+                const serviceData = {
+                    tenantId: tenant.id,
+                    name: "Corte Premium",
+                    description: "Corte de cabelo premium com acabamento especial",
+                    price: 45.00,
+                    durationMinutes: 40,
+                    color: "#E91E63"
+                };
+
+                console.log('📄 Dados do serviço:', serviceData);
+                
+                const response = await fetch(`${API_BASE}/api/service`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(serviceData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('✅ POST Criar Serviço', { status: response.status, data });
+                } else {
+                    const errorText = await response.text();
+                    showResult('❌ Erro POST Criar Serviço', { 
+                        status: response.status, 
+                        statusText: response.statusText,
+                        error: errorText 
+                    }, true);
+                }
+            } catch (error) {
+                showResult('❌ Erro POST Criar Serviço', { error: error.message }, true);
+            }
+        }
+
+        // Testar automaticamente ao carregar
+        window.onload = function() {
+            console.log('🚀 Iniciando testes automáticos...');
+            setTimeout(testGetTenant, 500);
+            setTimeout(testGetPublicServices, 1000);
+        };
+    </script>
+</body>
+</html> 
