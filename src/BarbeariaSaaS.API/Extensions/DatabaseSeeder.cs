@@ -10,9 +10,17 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context)
     {
-        if (context.Tenants.Any())
+        // Verificar se o banco já foi populado (com tratamento para tabelas que podem não existir)
+        try
         {
-            return; // Database already seeded
+            if (context.Tenants.Any())
+            {
+                return; // Database already seeded
+            }
+        }
+        catch
+        {
+            // Tabelas podem não existir ainda, continuar com o seeding
         }
 
         // Create test tenant
