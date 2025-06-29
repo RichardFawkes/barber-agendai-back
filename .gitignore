@@ -119,9 +119,6 @@ Desktop.ini
 # CONFIGURATION & SECRETS
 # ===================================
 appsettings.local.json
-appsettings.*.local.json
-appsettings.Development.json
-appsettings.Production.json
 appsettings.Staging.json
 *.secrets.json
 secrets.json
