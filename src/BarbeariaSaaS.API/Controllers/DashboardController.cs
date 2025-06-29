@@ -93,6 +93,105 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
+    /// Get bookings for a tenant (with filters)
+    /// </summary>
+    /// <param name="tenantId">Tenant ID</param>
+    /// <param name="startDate">Start date filter (YYYY-MM-DD)</param>
+    /// <param name="endDate">End date filter (YYYY-MM-DD)</param>
+    /// <param name="status">Status filter (confirmed, cancelled, completed)</param>
+    /// <returns>List of bookings</returns>
+    [HttpGet("bookings/{tenantId}")]
+    [ProducesResponseType(typeof(IEnumerable<BookingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetBookings(
+        string tenantId,
+        [FromQuery] string? startDate = null,
+        [FromQuery] string? endDate = null,
+        [FromQuery] string? status = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(tenantId) || !Guid.TryParse(tenantId, out var parsedTenantId))
+            {
+                return BadRequest(new { message = "Valid tenant ID is required" });
+            }
+
+            DateOnly? parsedStartDate = null;
+            DateOnly? parsedEndDate = null;
+
+            if (!string.IsNullOrEmpty(startDate) && !DateOnly.TryParse(startDate, out var tempStartDate))
+            {
+                return BadRequest(new { message = "Invalid start date format (use YYYY-MM-DD)" });
+            }
+            else if (!string.IsNullOrEmpty(startDate))
+            {
+                parsedStartDate = DateOnly.Parse(startDate);
+            }
+
+            if (!string.IsNullOrEmpty(endDate) && !DateOnly.TryParse(endDate, out var tempEndDate))
+            {
+                return BadRequest(new { message = "Invalid end date format (use YYYY-MM-DD)" });
+            }
+            else if (!string.IsNullOrEmpty(endDate))
+            {
+                parsedEndDate = DateOnly.Parse(endDate);
+            }
+
+            var query = new BarbeariaSaaS.Application.Features.Bookings.Queries.GetBookingsQuery(
+                parsedTenantId, parsedStartDate, parsedEndDate, status);
+            
+            var result = await _mediator.Send(query);
+
+            _logger.LogInformation("Retrieved {Count} bookings for tenant {TenantId}", result.Count(), tenantId);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting bookings for tenant: {TenantId}", tenantId);
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+    }
+
+    /// <summary>
+    /// Get today's bookings for authenticated user's tenant
+    /// </summary>
+    /// <returns>List of today's bookings</returns>
+    [HttpGet("bookings/today")]
+    [ProducesResponseType(typeof(IEnumerable<BookingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetTodayBookings()
+    {
+        try
+        {
+            // Get tenant ID from JWT claims
+            var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
+            
+            if (string.IsNullOrWhiteSpace(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+            {
+                return BadRequest(new { message = "User is not associated with a tenant" });
+            }
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var query = new BarbeariaSaaS.Application.Features.Bookings.Queries.GetBookingsQuery(
+                tenantId, today, today);
+            
+            var result = await _mediator.Send(query);
+
+            _logger.LogInformation("Retrieved {Count} bookings for today for tenant {TenantId}", result.Count(), tenantId);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting today's bookings for authenticated user");
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+    }
+
+    /// <summary>
     /// Health check for dashboard service
     /// </summary>
     [HttpGet("health")]

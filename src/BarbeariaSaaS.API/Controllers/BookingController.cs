@@ -127,6 +127,70 @@ public class BookingController : ControllerBase
     }
 
     /// <summary>
+    /// Get available time slots for booking
+    /// </summary>
+    /// <param name="subdomain">Tenant subdomain</param>
+    /// <param name="serviceId">Service ID</param>
+    /// <param name="date">Date in YYYY-MM-DD format</param>
+    /// <returns>List of available time slots</returns>
+    [HttpGet("available-times/{subdomain}")]
+    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<string>>> GetAvailableTimes(
+        string subdomain, 
+        [FromQuery] string serviceId, 
+        [FromQuery] string date)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(subdomain))
+            {
+                return BadRequest(new { message = "Subdomain is required" });
+            }
+
+            if (!Guid.TryParse(serviceId, out var parsedServiceId))
+            {
+                return BadRequest(new { message = "Valid service ID is required" });
+            }
+
+            if (!DateOnly.TryParse(date, out var parsedDate))
+            {
+                return BadRequest(new { message = "Valid date is required (YYYY-MM-DD format)" });
+            }
+
+            // Get tenant by subdomain first
+            var tenantQuery = new BarbeariaSaaS.Application.Features.Tenants.Queries.GetTenantBySubdomainQuery(subdomain.ToLower());
+            var tenant = await _mediator.Send(tenantQuery);
+
+            if (tenant == null)
+            {
+                return NotFound(new { message = "Tenant not found" });
+            }
+
+            var query = new BarbeariaSaaS.Application.Features.Bookings.Queries.GetAvailableTimesQuery(
+                Guid.Parse(tenant.Id), 
+                parsedServiceId, 
+                parsedDate);
+            
+            var result = await _mediator.Send(query);
+
+            // Convert TimeOnly to string format
+            var timeStrings = result.Select(t => t.ToString("HH:mm"));
+
+            _logger.LogInformation("Retrieved {Count} available times for subdomain {Subdomain} on {Date}", 
+                timeStrings.Count(), subdomain, date);
+
+            return Ok(timeStrings);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available times for subdomain {Subdomain} on {Date}", subdomain, date);
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+    }
+
+    /// <summary>
     /// Health check for booking service
     /// </summary>
     [HttpGet("health")]
