@@ -1,0 +1,354 @@
+# ===================================
+# .NET GITIGNORE - COMPLETO
+# Para projetos ASP.NET Core / .NET 8+
+# ===================================
+
+# ===================================
+# BUILD OUTPUTS & BINARIES
+# ===================================
+bin/
+obj/
+out/
+build/
+publish/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# ===================================
+# VISUAL STUDIO / RIDER
+# ===================================
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.tlog
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio 2015/2017/2019/2022 cache/options
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ===================================
+# NUGET PACKAGES
+# ===================================
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!packages/build/
+*.nuget.props
+*.nuget.targets
+
+# ===================================
+# TEST RESULTS & COVERAGE
+# ===================================
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*.xml
+coverage*.json
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.cobertura
+.nyc_output/
+[Cc]overage/
+
+# ===================================
+# DATABASE & LOGS
+# ===================================
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+App_Data/
+
+# SQL Server files
+*.mdf
+*.ldf
+*.ndf
+
+# ===================================
+# TEMP & CACHE FILES
+# ===================================
+*.tmp
+*.temp
+*.cache
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===================================
+# CONFIGURATION & SECRETS
+# ===================================
+appsettings.local.json
+appsettings.*.local.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+*.secrets.json
+secrets.json
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# User secrets (Visual Studio)
+UserSecrets/
+secrets/
+
+# ===================================
+# ENTITY FRAMEWORK
+# ===================================
+*.edmx.diagram
+*.edmx.sql
+
+# Migrations (optional - descomente se quiser ignorar)
+# Migrations/
+
+# ===================================
+# WEB ASSETS & PUBLISHING
+# ===================================
+wwwroot/lib/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Compiled output
+dist/
+tmp/
+out-tsc/
+
+# ===================================
+# RUNTIME & FRAMEWORK
+# ===================================
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# ===================================
+# DOCKER
+# ===================================
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+docker-compose*.yaml
+
+# Exceto arquivos principais do Docker
+!Dockerfile
+!docker-compose.yml
+!docker-compose.yaml
+
+# ===================================
+# TOOLS & IDE SPECIFIC
+# ===================================
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ===================================
+# AZURE & CLOUD
+# ===================================
+PublishProfiles/
+*.pubxml
+*.publishsettings
+
+# Azure Functions
+local.settings.json
+.azure/
+
+# ===================================
+# MONITORAMENTO & PROFILING
+# ===================================
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.dmp
+
+# Application Insights
+ApplicationInsights.config
+
+# ===================================
+# OUTROS FRAMEWORKS & TOOLS
+# ===================================
+# Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# TeamCity
+_TeamCity*
+
+# DotCover
+*.dotCover
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# MightyMoose
+*.mm.*
+AutoTest.Net/
+
+# Installshield
+[Ee]xpress/
+
+# DocProject
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+
+# ===================================
+# SISTEMA OPERACIONAL
+# ===================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===================================
+# BARBEARIA SAAS ESPECÍFICO
+# ===================================
+# Arquivos de upload/imagens locais
+uploads/
+images/
+files/
+assets/uploads/
+
+# Logs da aplicação
+logs/
+*.log
+
+# Backup do banco de dados
+*.bak
+backup/
+
+# Certificados SSL locais
+*.pfx
+*.p12
+certificates/
+
+# Cache Redis local
+dump.rdb
+
+# ===================================
+# COMENTÁRIOS IMPORTANTES
+# ===================================
+# 
+# INCLUIR NO GIT (não ignore):
+# - appsettings.json (configurações base)
+# - Migrations/ (Entity Framework migrations)
+# - wwwroot/ (exceto lib/ que vem de package managers)
+# - Dockerfile e docker-compose.yml principais
+# - README.md e documentação
+# 
+# =================================== 
