@@ -86,7 +86,7 @@ Após iniciar o ambiente:
 ### **Containers:**
 
 ```
-📦 barbearia-saas-api     → API Principal (.NET 8)
+📦 barbearia-saas-api     → API Principal (.NET 9)
 📦 barbearia-saas-db      → SQL Server 2022
 📦 barbearia-saas-redis   → Redis 7 (Cache)
 📦 barbearia-saas-adminer → Interface do BD

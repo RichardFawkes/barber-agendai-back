@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet)
-![C#](https://img.shields.io/badge/C%23-11.0-239120?style=for-the-badge&logo=csharp)
+![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet)
+![C#](https://img.shields.io/badge/C%23-12.0-239120?style=for-the-badge&logo=csharp)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-CC2927?style=for-the-badge&logo=microsoft-sql-server)
 ![Entity Framework](https://img.shields.io/badge/Entity%20Framework-512BD4?style=for-the-badge&logo=microsoft)
 ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens)
@@ -50,7 +50,7 @@ O projeto segue os princípios da **Clean Architecture** com as seguintes camada
 ### 🛠️ **Tecnologias Utilizadas**
 
 #### **Backend**
-- **.NET 8** - Framework principal
+- **.NET 9** - Framework principal
 - **ASP.NET Core** - API REST
 - **Entity Framework Core** - ORM e acesso a dados
 - **SQL Server** - Banco de dados principal
@@ -74,7 +74,7 @@ O projeto segue os princípios da **Clean Architecture** com as seguintes camada
 
 ### **Pré-requisitos**
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [SQL Server LocalDB](https://docs.microsoft.com/sql/database-engine/configure-windows/sql-server-express-localdb) ou SQL Server
 - [Git](https://git-scm.com/)
 
