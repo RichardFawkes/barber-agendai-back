@@ -13,83 +13,22 @@ public static class DatabaseSeeder
     {
         var databaseProvider = context.Database.ProviderName;
         
-        // Verificar se as tabelas existem antes de tentar fazer seeding
+        // Verificar se as tabelas existem e se o banco já foi populado
         try
         {
-            // Verificação específica por provider de banco de dados
-            bool tablesExist = false;
-            
-            if (databaseProvider?.Contains("Npgsql") == true)
-            {
-                // PostgreSQL - verificar usando information_schema
-                try
-                {
-                    var result = await context.Database.ExecuteSqlRawAsync(@"
-                        SELECT COUNT(*) FROM information_schema.tables 
-                        WHERE table_name IN ('Tenants', 'Users', 'Services') 
-                        AND table_schema = 'public'");
-                    tablesExist = true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"PostgreSQL table check failed: {ex.Message}");
-                    return;
-                }
-            }
-            else if (databaseProvider?.Contains("Sqlite") == true)
-            {
-                // SQLite - verificar usando sqlite_master
-                try
-                {
-                    await context.Database.ExecuteSqlRawAsync("SELECT name FROM sqlite_master WHERE type='table' AND name='Tenants'");
-                    tablesExist = true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"SQLite table check failed: {ex.Message}");
-                    return;
-                }
-            }
-            else
-            {
-                // SQL Server - verificar usando sys.tables
-                try
-                {
-                    await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM sys.tables WHERE name = 'Tenants'");
-                    tablesExist = true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"SQL Server table check failed: {ex.Message}");
-                    return;
-                }
-            }
-            
-            if (!tablesExist)
-            {
-                Console.WriteLine("Tables do not exist yet, skipping seeding");
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Database table verification failed: {ex.Message}");
-            return;
-        }
-
-        // Verificar se o banco já foi populado
-        try
-        {
+            // Tentar acessar a tabela Tenants para verificar se ela existe
             var existingTenants = await context.Tenants.CountAsync();
             if (existingTenants > 0)
             {
                 Console.WriteLine("Database already seeded, skipping");
                 return; // Database already seeded
             }
+            Console.WriteLine("Database tables exist but are empty, proceeding with seeding...");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error checking existing data: {ex.Message}");
+            Console.WriteLine($"Database tables do not exist or cannot be accessed: {ex.Message}");
+            Console.WriteLine("Skipping seeding - tables need to be created first");
             return;
         }
 

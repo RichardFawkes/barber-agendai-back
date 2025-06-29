@@ -228,47 +228,64 @@ using (var scope = app.Services.CreateScope())
             {
                 // Verificar se o banco de dados pode ser acessado
                 logger.LogInformation("Testing PostgreSQL connection...");
-                await context.Database.CanConnectAsync();
-                logger.LogInformation("✅ PostgreSQL connection successful");
+                var canConnect = await context.Database.CanConnectAsync();
+                logger.LogInformation("✅ PostgreSQL connection successful: {CanConnect}", canConnect);
                 
                 // Verificar se as tabelas já existem
                 logger.LogInformation("Checking if tables exist...");
                 var tableExists = false;
                 try
                 {
-                    var result = await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM information_schema.tables WHERE table_name = 'Tenants' LIMIT 1");
+                    // Tentar uma query simples na tabela Tenants
+                    var count = await context.Tenants.CountAsync();
                     tableExists = true;
-                    logger.LogInformation("✅ Tables already exist");
+                    logger.LogInformation("✅ Tables already exist, found {Count} tenants", count);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    logger.LogInformation("Tables do not exist yet");
+                    logger.LogInformation("Tables do not exist yet: {Error}", ex.Message);
                 }
                 
                 if (!tableExists)
                 {
                     logger.LogInformation("Creating PostgreSQL database structure...");
                     
-                    // Forçar criação do banco usando EnsureCreated
-                    await context.Database.EnsureCreatedAsync();
-                    logger.LogInformation("✅ PostgreSQL database created successfully");
-                    
-                    // Verificar se as tabelas foram criadas
                     try
                     {
-                        await context.Database.ExecuteSqlRawAsync("SELECT 1 FROM \"Tenants\" LIMIT 1");
-                        logger.LogInformation("✅ Tables verification successful");
+                        // Tentar primeiro EnsureCreated
+                        logger.LogInformation("Attempting EnsureCreated...");
+                        var created = await context.Database.EnsureCreatedAsync();
+                        logger.LogInformation("EnsureCreated result: {Created}", created);
+                        
+                        // Verificar se as tabelas foram criadas
+                        await Task.Delay(1000); // Aguardar um pouco
+                        var verifyCount = await context.Tenants.CountAsync();
+                        logger.LogInformation("✅ Tables created successfully, verification count: {Count}", verifyCount);
                     }
-                    catch (Exception ex)
+                    catch (Exception ensureEx)
                     {
-                        logger.LogError("❌ Table verification failed: {Error}", ex.Message);
-                        throw new Exception("Failed to create PostgreSQL tables", ex);
+                        logger.LogWarning("EnsureCreated failed: {Error}", ensureEx.Message);
+                        
+                        // Fallback: tentar usar migrations
+                        try
+                        {
+                            logger.LogInformation("Trying migrations as fallback...");
+                            await context.Database.MigrateAsync();
+                            logger.LogInformation("✅ Migrations applied successfully");
+                        }
+                        catch (Exception migrateEx)
+                        {
+                            logger.LogError("Both EnsureCreated and Migrations failed. EnsureCreated: {EnsureError}, Migrations: {MigrateError}", 
+                                ensureEx.Message, migrateEx.Message);
+                            throw new Exception("Failed to create PostgreSQL database structure", migrateEx);
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
                 logger.LogError("❌ PostgreSQL setup failed: {Error}", ex.Message);
+                logger.LogError("Full exception: {Exception}", ex.ToString());
                 throw new Exception("PostgreSQL database setup failed", ex);
             }
         }
