@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using BarbeariaSaaS.Application.Features.Tenants.Queries;
+using BarbeariaSaaS.Application.Features.Tenants.Commands;
 using BarbeariaSaaS.Shared.DTOs.Response;
+using BarbeariaSaaS.Shared.DTOs.Request;
 
 namespace BarbeariaSaaS.API.Controllers;
 
@@ -17,6 +19,75 @@ public class TenantController : ControllerBase
     {
         _mediator = mediator;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Create a new tenant (barbershop) with admin user
+    /// </summary>
+    /// <param name="createTenantDto">Tenant and admin data</param>
+    /// <returns>Created tenant with authentication token</returns>
+    [HttpPost("create")]
+    [ProducesResponseType(typeof(CreateTenantResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(CreateTenantResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(CreateTenantResponseDto), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(CreateTenantResponseDto), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<CreateTenantResponseDto>> Create([FromBody] CreateTenantWithAdminDto createTenantDto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                var modelErrors = ModelState
+                    .Where(x => x.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToList()
+                    );
+
+                var errorResponse = new CreateTenantResponseDto
+                {
+                    Success = false,
+                    Message = "Dados inválidos",
+                    Errors = modelErrors
+                };
+
+                return BadRequest(errorResponse);
+            }
+
+            var command = new CreateTenantWithAdminCommand(createTenantDto);
+            var result = await _mediator.Send(command);
+
+            if (!result.Success)
+            {
+                if (result.Message == "Conflito")
+                {
+                    return Conflict(result);
+                }
+                
+                if (result.Message == "Dados inválidos")
+                {
+                    return UnprocessableEntity(result);
+                }
+
+                return StatusCode(500, result);
+            }
+
+            _logger.LogInformation("Tenant created successfully: {Subdomain}", createTenantDto.Tenant.Subdomain);
+            return Created($"/api/tenant/by-subdomain/{createTenantDto.Tenant.Subdomain}", result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating tenant");
+            
+            var errorResponse = new CreateTenantResponseDto
+            {
+                Success = false,
+                Message = "Erro interno do servidor"
+            };
+            
+            return StatusCode(500, errorResponse);
+        }
     }
 
     /// <summary>
