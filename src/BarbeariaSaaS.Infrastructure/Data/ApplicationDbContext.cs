@@ -19,6 +19,19 @@ public class ApplicationDbContext : DbContext
     public DbSet<BusinessHour> BusinessHours { get; set; }
     public DbSet<BarbeariaSaaS.Domain.Entities.File> Files { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // Configurar warnings do EF Core
+        optionsBuilder.ConfigureWarnings(warnings =>
+        {
+            // Em produção, suprimir warning de pending changes
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+            {
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+            }
+        });
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

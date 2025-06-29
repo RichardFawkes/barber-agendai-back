@@ -198,13 +198,25 @@ using (var scope = app.Services.CreateScope())
     
     try
     {
-        logger.LogInformation("=== STARTING DATABASE MIGRATION ===");
+        logger.LogInformation("=== STARTING DATABASE SETUP ===");
         logger.LogInformation("Database Provider: {Provider}", context.Database.ProviderName);
         
-        // Ensure database is created and migrations are applied
-        logger.LogInformation("Applying migrations...");
-        await context.Database.MigrateAsync();
-        logger.LogInformation("✅ Database migration completed successfully");
+        var databaseProvider = context.Database.ProviderName;
+        
+        if (databaseProvider?.Contains("Sqlite") == true)
+        {
+            // SQLite - Use EnsureCreated (mais simples e confiável)
+            logger.LogInformation("Using EnsureCreated for SQLite database...");
+            await context.Database.EnsureCreatedAsync();
+            logger.LogInformation("✅ SQLite database created/verified successfully");
+        }
+        else
+        {
+            // PostgreSQL/SQL Server - Use Migrations
+            logger.LogInformation("Applying migrations for {Provider}...", databaseProvider);
+            await context.Database.MigrateAsync();
+            logger.LogInformation("✅ Database migration completed successfully");
+        }
         
         // Seed data
         logger.LogInformation("Starting database seeding...");
@@ -213,17 +225,17 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "❌ An error occurred while migrating or seeding the database");
+        logger.LogError(ex, "❌ An error occurred while setting up the database");
         
         // In production, we want to fail fast if database is not accessible
         if (app.Environment.IsProduction())
         {
-            logger.LogCritical("Database migration failed in production. Stopping application.");
+            logger.LogCritical("Database setup failed in production. Stopping application.");
             throw;
         }
         
         // In development, log and continue
-        logger.LogWarning("Continuing without database migration/seeding due to error");
+        logger.LogWarning("Continuing without database setup due to error");
     }
 }
 
