@@ -4,6 +4,16 @@ Guia completo para fazer deploy da API BarbeariaSaaS no Render.com.
 
 ---
 
+## 🔗 **Configuração de Banco de Dados Inteligente**
+
+A aplicação agora detecta automaticamente o ambiente e usa o banco apropriado:
+
+- 🌐 **Render.com/Heroku**: PostgreSQL (via `DATABASE_URL`)
+- 💻 **Desenvolvimento Local**: SQL Server LocalDB
+- 🔄 **Fallback Universal**: SQLite
+
+---
+
 ## 📋 **Pré-requisitos**
 
 - Conta no [Render.com](https://render.com)
@@ -52,62 +62,72 @@ Guia completo para fazer deploy da API BarbeariaSaaS no Render.com.
 
 ## ⚙️ **3. Configurar Variáveis de Ambiente**
 
-### **Environment Variables:**
+### **Environment Variables Essenciais:**
 
 ```env
 # Ambiente
 ASPNETCORE_ENVIRONMENT=Production
 ASPNETCORE_URLS=http://+:10000
 
-# Banco de Dados (será preenchido automaticamente)
+# Banco de Dados (será preenchido automaticamente pelo Render)
 DATABASE_URL=postgres://barbearia_user:password@dpg-xxxxx/barbearia_saas
 
-# JWT Settings
+# JWT Settings (OBRIGATÓRIO)
 JWT_SECRET_KEY=SUA-CHAVE-SUPER-SECRETA-256-BITS-AQUI-PRODUCTION-2024
 JWT_ISSUER=BarbeariaSaaS-Production
 JWT_AUDIENCE=BarbeariaSaaS-Users-Production
 
-# CORS (URL do seu frontend)
+# CORS (URL do seu frontend - OPCIONAL)
 FRONTEND_URL=https://seu-frontend.vercel.app
 
-# Logs
+# Logs (OPCIONAL)
 Logging__LogLevel__Default=Information
 Logging__LogLevel__Microsoft=Warning
 ```
 
 ### **⚠️ Importante:**
-- Substitua `SUA-CHAVE-SUPER-SECRETA-256-BITS-AQUI-PRODUCTION-2024` por uma chave real
-- Substitua `https://seu-frontend.vercel.app` pela URL real do seu frontend
-- O `DATABASE_URL` será preenchido automaticamente pelo Render
+- ✅ **DATABASE_URL** - Preenchido automaticamente pelo Render
+- 🔑 **JWT_SECRET_KEY** - OBRIGATÓRIO gerar uma chave segura
+- 🌐 **FRONTEND_URL** - Adicionar URL do seu frontend para CORS
+- 📝 As demais são opcionais
 
 ---
 
 ## 🔑 **4. Gerar Chave JWT Segura**
 
-Use um gerador de chaves ou PowerShell/Terminal:
+**ESCOLHA UMA OPÇÃO:**
 
-### **PowerShell:**
+### **Opção 1 - PowerShell (Windows):**
 ```powershell
 [System.Web.Security.Membership]::GeneratePassword(64, 0)
 ```
 
-### **Terminal Linux/macOS:**
+### **Opção 2 - Terminal (Linux/macOS):**
 ```bash
 openssl rand -base64 64
 ```
 
-### **Online:**
-- [Random.org](https://www.random.org/passwords/?num=1&len=64&format=plain)
+### **Opção 3 - Node.js:**
+```javascript
+console.log(require('crypto').randomBytes(48).toString('base64'));
+```
+
+### **Opção 4 - Online (Rápido):**
+- [Random.org - Password Generator](https://www.random.org/passwords/?num=1&len=64&format=plain)
 
 ---
 
-## 🐳 **5. Ajustar Dockerfile para Render**
+## 🐳 **5. Verificar Dockerfile**
 
-O Dockerfile já está configurado, mas certifique-se de que a porta está correta:
+O Dockerfile já está configurado corretamente:
 
 ```dockerfile
+# Porta do Render.com
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
+
+# Health check configurado
+HEALTHCHECK CMD curl -f http://localhost:10000/health || exit 1
 ```
 
 ---
@@ -116,10 +136,10 @@ EXPOSE 10000
 
 ### **Primeira vez:**
 
-1. Configure todas as variáveis de ambiente
-2. Clique em **"Create Web Service"**
-3. Aguarde o build (pode levar 5-10 minutos)
-4. Acesse a URL fornecida pelo Render
+1. ✅ Configure todas as variáveis de ambiente **OBRIGATÓRIAS**
+2. ✅ Clique em **"Create Web Service"**
+3. ⏳ Aguarde o build (5-10 minutos)
+4. 🎉 Acesse a URL fornecida pelo Render
 
 ### **Próximos deploys:**
 
@@ -128,9 +148,9 @@ EXPOSE 10000
 
 ---
 
-## 📡 **7. Testar a API**
+## 🔍 **7. Verificar Deploy**
 
-### **Health Check:**
+### **A. Health Check:**
 ```bash
 curl https://sua-api.onrender.com/health
 ```
@@ -139,18 +159,20 @@ curl https://sua-api.onrender.com/health
 ```json
 {
   "status": "Healthy",
-  "timestamp": "2024-12-25T10:00:00Z",
+  "timestamp": "2025-01-25T10:00:00Z",
   "environment": "Production",
-  "database": "PostgreSQL"
+  "database": "PostgreSQL (Cloud)",
+  "databaseProvider": "Npgsql.EntityFrameworkCore.PostgreSQL",
+  "hasDatabaseUrl": true
 }
 ```
 
-### **Swagger:**
+### **B. Swagger (Documentação):**
 ```
 https://sua-api.onrender.com/docs
 ```
 
-### **Login Test:**
+### **C. Teste de Login:**
 ```bash
 curl -X POST https://sua-api.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
@@ -162,43 +184,50 @@ curl -X POST https://sua-api.onrender.com/api/auth/login \
 
 ---
 
-## 🔧 **8. Configurações Avançadas**
+## 🏠 **8. Desenvolvimento Local**
 
-### **Health Check (Opcional):**
+### **Opção 1 - SQL Server LocalDB (Padrão):**
+```bash
+# Usar configuração padrão
+dotnet run --project src/BarbeariaSaaS.API
 ```
-Health Check Path: /health
+
+### **Opção 2 - SQLite (Alternativa):**
+```bash
+# Usar configuração SQLite
+dotnet run --project src/BarbeariaSaaS.API --launch-profile "SQLite"
 ```
 
-### **Custom Domain:**
-No dashboard do Render → Settings → Custom Domains
-
-### **Auto-Deploy:**
-Já configurado por padrão quando conecta o GitHub
+Ou copiar `appsettings.SQLite.json` para `appsettings.Development.json`.
 
 ---
 
 ## 🐛 **9. Troubleshooting**
 
-### **Build falha:**
+### **❌ Build Failed:**
 ```bash
-# Ver logs no dashboard do Render
-# Ou verificar se todas as dependências estão no .csproj
+# Ver logs detalhados no dashboard do Render
+# Verificar se todas as dependências estão no .csproj
 ```
 
-### **Erro de conexão com banco:**
-- Verifique se o `DATABASE_URL` está correto
-- Confirme se o banco PostgreSQL está rodando
-- Teste a conexão manualmente
+### **❌ Database Connection Error:**
+- ✅ Verificar se `DATABASE_URL` está configurada
+- ✅ Confirmar se PostgreSQL está rodando no Render
+- ✅ Verificar nos logs se está detectando PostgreSQL
 
-### **Erro 500:**
-```bash
-# Ver logs da aplicação no dashboard
-# Verificar se todas as variáveis de ambiente estão configuradas
+### **❌ JWT/Auth Error:**
+- ✅ Verificar se `JWT_SECRET_KEY` está configurada
+- ✅ Confirmar se a chave tem pelo menos 32 caracteres
+- ✅ Testar endpoint de login
+
+### **❌ CORS Error:**
+- ✅ Adicionar `FRONTEND_URL` com URL do seu frontend
+- ✅ Verificar se o domínio está correto (com https://)
+
+### **🔍 Ver Logs em Tempo Real:**
 ```
-
-### **CORS Error:**
-- Verifique se `FRONTEND_URL` está configurada
-- Confirme se o domínio do frontend está correto
+Dashboard → Services → sua-api → Logs
+```
 
 ---
 
@@ -221,48 +250,85 @@ Dashboard → PostgreSQL → barbearia-saas-db → Metrics
 
 ---
 
-## 💰 **11. Custos**
+## 💰 **11. Custos (2025)**
 
 ### **Free Tier:**
-- **Web Service**: 750 horas/mês gratuitas
-- **PostgreSQL**: 1GB storage gratuito
-- **Limitações**: Sleep após 15min inatividade
+- ✅ **Web Service**: 750 horas/mês gratuitas
+- ✅ **PostgreSQL**: 1GB storage gratuito
+- ⚠️ **Limitação**: Sleep após 15min inatividade
 
 ### **Paid Plans:**
-- **Starter**: $7/mês - Sem sleep
-- **Standard**: $25/mês - Mais recursos
+- 💰 **Starter**: $7/mês - Sem sleep
+- 💰 **Standard**: $25/mês - Mais recursos
 
 ---
 
-## 🔗 **12. URLs Importantes**
+## 🔗 **12. URLs de Exemplo**
 
 ```
-API Base URL: https://barbearia-saas-api.onrender.com
-Swagger: https://barbearia-saas-api.onrender.com/docs
+API Base: https://barbearia-saas-api.onrender.com
 Health: https://barbearia-saas-api.onrender.com/health
+Docs: https://barbearia-saas-api.onrender.com/docs
+Login: https://barbearia-saas-api.onrender.com/api/auth/login
 ```
 
 ---
 
-## 📝 **13. Checklist de Deploy**
+## 📝 **13. Checklist Final**
 
-- [ ] ✅ Banco PostgreSQL criado
-- [ ] ✅ Variáveis de ambiente configuradas
-- [ ] ✅ JWT Secret Key gerada
-- [ ] ✅ FRONTEND_URL configurada
-- [ ] ✅ Web Service criado
-- [ ] ✅ Build completado com sucesso
-- [ ] ✅ Health check funcionando
-- [ ] ✅ Swagger acessível
+### **Antes do Deploy:**
+- [ ] ✅ Repo no GitHub atualizado
+- [ ] ✅ Dockerfile na raiz do projeto
+- [ ] ✅ Código compilando localmente
+
+### **No Render.com:**
+- [ ] ✅ PostgreSQL criado
+- [ ] ✅ Web Service criado e conectado ao GitHub
+- [ ] ✅ `DATABASE_URL` configurada automaticamente
+- [ ] ✅ `JWT_SECRET_KEY` configurada manualmente
+- [ ] ✅ `JWT_ISSUER` e `JWT_AUDIENCE` configuradas
+- [ ] ✅ `FRONTEND_URL` configurada (se houver frontend)
+
+### **Após Deploy:**
+- [ ] ✅ Build completado sem erro
+- [ ] ✅ Health check retornando `"PostgreSQL (Cloud)"`
+- [ ] ✅ Swagger acessível em `/docs`
 - [ ] ✅ Login funcionando
-- [ ] ✅ CORS configurado
+- [ ] ✅ CORS configurado para frontend
+
+---
+
+## 🎯 **Dicas Importantes**
+
+### **🔧 Para Desenvolvedores:**
+```bash
+# Ver qual banco está sendo usado
+curl localhost:5080/health
+
+# Rodar com SQLite localmente
+dotnet run --project src/BarbeariaSaaS.API --configuration SQLite
+```
+
+### **🌐 Para Deploy:**
+```bash
+# Testar antes do commit
+dotnet build
+dotnet test
+
+# Commit e push
+git add .
+git commit -m "Deploy ready"
+git push origin main
+```
 
 ---
 
 <div align="center">
 
-**🎉 Deploy realizado com sucesso!**
+**🎉 Deploy Automatizado Configurado!**
 
-*Sua API BarbeariaSaaS está rodando em produção.*
+*Sua API BarbeariaSaaS agora detecta o ambiente automaticamente.*
+
+**🔄 Local**: SQL Server → **🌐 Render.com**: PostgreSQL → **🔧 Fallback**: SQLite
 
 </div> 

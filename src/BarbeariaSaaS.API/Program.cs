@@ -16,8 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 
-// Database Configuration - Simplified and robust
+// Database Configuration - Smart detection
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var isProduction = builder.Environment.IsProduction();
 
 // Log database configuration for debugging
@@ -25,18 +26,14 @@ Console.WriteLine($"=== DATABASE CONFIGURATION ===");
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 Console.WriteLine($"IsProduction: {isProduction}");
 Console.WriteLine($"DATABASE_URL present: {!string.IsNullOrEmpty(databaseUrl)}");
-if (!string.IsNullOrEmpty(databaseUrl))
-{
-    var uri = new Uri(databaseUrl);
-    Console.WriteLine($"DATABASE_URL host: {uri.Host}");
-}
+Console.WriteLine($"ConnectionString from config: {connectionString}");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     if (!string.IsNullOrEmpty(databaseUrl))
     {
-        // Production - PostgreSQL from DATABASE_URL (Render.com)
-        Console.WriteLine("✅ USING: PostgreSQL from DATABASE_URL");
+        // Cloud Production - PostgreSQL from DATABASE_URL (Render.com, Heroku, etc.)
+        Console.WriteLine("✅ USING: PostgreSQL from DATABASE_URL (Cloud)");
         
         try
         {
@@ -57,14 +54,27 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite(fallbackConnection);
         }
     }
+    else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("localdb"))
+    {
+        // Local Development - SQL Server LocalDB (only if explicitly configured)
+        Console.WriteLine("✅ USING: SQL Server LocalDB (Development)");
+        Console.WriteLine($"Connection: {connectionString}");
+        options.UseSqlServer(connectionString);
+    }
+    else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Data Source"))
+    {
+        // SQLite (from config or fallback)
+        Console.WriteLine("✅ USING: SQLite (from configuration)");
+        Console.WriteLine($"Connection: {connectionString}");
+        options.UseSqlite(connectionString);
+    }
     else
     {
-        // Always use SQLite when DATABASE_URL is not available
-        // This ensures we NEVER try to use SQL Server LocalDB
+        // Ultimate fallback - SQLite
         var sqliteFile = isProduction ? "barbearia_production.db" : "barbearia_development.db";
         var sqliteConnection = $"Data Source={sqliteFile}";
         
-        Console.WriteLine($"✅ USING: SQLite - {sqliteFile}");
+        Console.WriteLine($"✅ USING: SQLite (fallback) - {sqliteFile}");
         Console.WriteLine($"SQLite connection: {sqliteConnection}");
         options.UseSqlite(sqliteConnection);
     }
@@ -248,22 +258,35 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health Check endpoint
+// Health Check endpoint with detailed database info
 app.MapGet("/health", (IServiceProvider serviceProvider) => 
 {
     var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
     var environment = serviceProvider.GetRequiredService<IWebHostEnvironment>();
+    var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
     
-    var dbType = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")) ? "PostgreSQL" : "SQLite";
+    var dbProvider = context.Database.ProviderName ?? "Unknown";
+    var hasDbUrl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"));
     
-    logger.LogInformation("Health check requested - Status: Healthy, Database: {DbType}", dbType);
+    string dbType;
+    if (hasDbUrl)
+        dbType = "PostgreSQL (Cloud)";
+    else if (dbProvider.Contains("SqlServer"))
+        dbType = "SQL Server (Local)";
+    else if (dbProvider.Contains("Sqlite"))
+        dbType = "SQLite";
+    else
+        dbType = dbProvider;
+    
+    logger.LogInformation("Health check - Database: {DbType}, Provider: {Provider}", dbType, dbProvider);
     
     return Results.Ok(new { 
         Status = "Healthy", 
         Timestamp = DateTime.UtcNow,
         Environment = environment.EnvironmentName,
         Database = dbType,
-        HasDatabaseUrl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
+        DatabaseProvider = dbProvider,
+        HasDatabaseUrl = hasDbUrl
     });
 });
 

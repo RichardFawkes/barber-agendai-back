@@ -84,8 +84,11 @@ O projeto segue os princípios da **Clean Architecture** com as seguintes camada
 ### **Pré-requisitos**
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [SQL Server LocalDB](https://docs.microsoft.com/sql/database-engine/configure-windows/sql-server-express-localdb) ou SQL Server
 - [Git](https://git-scm.com/)
+- **Banco de Dados** (uma das opções):
+  - 🏆 **SQL Server LocalDB** (recomendado para Windows)
+  - 🔄 **SQLite** (funciona em qualquer OS)
+  - 🌐 **PostgreSQL** (automático no Render.com)
 
 ### **1. Clone o Repositório**
 
@@ -102,14 +105,29 @@ dotnet restore
 
 ### **3. Configurar Banco de Dados**
 
-O sistema utiliza **Code First**, então o banco será criado automaticamente:
+A aplicação **detecta automaticamente** o ambiente e usa o banco apropriado:
 
+#### **🖥️ Desenvolvimento Local:**
+
+**Opção A - SQL Server LocalDB (Windows - Padrão):**
 ```bash
-# Aplicar migrations (se necessário)
-dotnet ef database update --project src/BarbeariaSaaS.Infrastructure
-
-# Ou simplesmente rodar a aplicação (auto-migration habilitada)
+# Usar configuração padrão - nada a fazer!
 dotnet run --project src/BarbeariaSaaS.API
+```
+
+**Opção B - SQLite (Multiplataforma):**
+```bash
+# Copiar configuração SQLite
+cp src/BarbeariaSaaS.API/appsettings.SQLite.json src/BarbeariaSaaS.API/appsettings.Development.json
+
+# Ou rodar diretamente
+dotnet run --project src/BarbeariaSaaS.API
+```
+
+#### **🌐 Produção (Render.com):**
+```bash
+# PostgreSQL configurado automaticamente via DATABASE_URL
+# Nenhuma configuração manual necessária!
 ```
 
 ### **4. Executar a Aplicação**
@@ -118,23 +136,42 @@ dotnet run --project src/BarbeariaSaaS.API
 dotnet run --project src/BarbeariaSaaS.API
 ```
 
-A API estará disponível em:
-- **HTTP**: `http://localhost:5080`
-- **Swagger UI**: `http://localhost:5080`
+**URLs disponíveis:**
+- 🌐 **API**: `http://localhost:5080`
+- 📖 **Swagger**: `http://localhost:5080`
+- ✅ **Health Check**: `http://localhost:5080/health`
 
 ---
 
 ## 🔧 **Configuração**
 
-### **appsettings.json**
+### **🔍 Detecção Automática de Banco**
 
+A aplicação usa **configuração inteligente**:
+
+```mermaid
+graph TD
+    A[Iniciar App] --> B{DATABASE_URL existe?}
+    B -->|Sim| C[🌐 PostgreSQL Cloud]
+    B -->|Não| D{appsettings.json tem localdb?}
+    D -->|Sim| E[💻 SQL Server LocalDB]
+    D -->|Não| F[🔄 SQLite Fallback]
+    
+    C --> G[✅ App Iniciada]
+    E --> G
+    F --> G
+```
+
+### **📝 Configurações por Ambiente**
+
+#### **Desenvolvimento (`appsettings.json`):**
 ```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=BarbeariaSaaS;Trusted_Connection=true;MultipleActiveResultSets=true"
   },
   "JwtSettings": {
-    "SecretKey": "SUA-CHAVE-SECRETA-AQUI-256-BITS",
+    "SecretKey": "BarbeariaSaaS-Super-Secret-Key-256-Bits-For-JWT-Token-Security-2024",
     "Issuer": "BarbeariaSaaS",
     "Audience": "BarbeariaSaaS-Users",
     "ExpirationHours": 24
@@ -142,11 +179,26 @@ A API estará disponível em:
 }
 ```
 
-### **Variáveis de Ambiente (Produção)**
+#### **Produção (Variáveis de Ambiente):**
+```bash
+# Render.com/Heroku - Configurado automaticamente
+DATABASE_URL=postgres://user:pass@host:port/db
+JWT_SECRET_KEY=sua-chave-secreta-production-256-bits
+JWT_ISSUER=BarbeariaSaaS-Production
+JWT_AUDIENCE=BarbeariaSaaS-Users-Production
+```
+
+### **🔄 Alternativa SQLite**
+
+Para usar SQLite em desenvolvimento:
 
 ```bash
-export ConnectionStrings__DefaultConnection="Data Source=servidor;Initial Catalog=BarbeariaSaaS;User ID=usuario;Password=senha"
-export JwtSettings__SecretKey="sua-chave-secreta-production-256-bits"
+# Opção 1: Copiar configuração
+cp src/BarbeariaSaaS.API/appsettings.SQLite.json src/BarbeariaSaaS.API/appsettings.Development.json
+
+# Opção 2: Editar appsettings.json
+# Alterar ConnectionString para:
+# "DefaultConnection": "Data Source=barbearia_development.db"
 ```
 
 ---
