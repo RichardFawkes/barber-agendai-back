@@ -1,6 +1,7 @@
 # ===================================
 # DOCKERFILE - BARBEARIA SAAS API
 # Multi-stage build para .NET 9
+# Otimizado para Render.com
 # ===================================
 
 # ===================================
@@ -9,8 +10,9 @@
 # ===================================
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+
+# Render.com usa porta 10000
+EXPOSE 10000
 
 # Criar usuário não-root para segurança
 RUN addgroup --system --gid 1001 dotnetgroup
@@ -64,8 +66,8 @@ RUN apt-get update && apt-get install -y \
 ENV TZ=America/Sao_Paulo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Configurações de ambiente
-ENV ASPNETCORE_URLS=http://+:8080
+# Configurações de ambiente para Render.com
+ENV ASPNETCORE_URLS=http://+:10000
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV DOTNET_USE_POLLING_FILE_WATCHER=true
@@ -81,9 +83,9 @@ RUN mkdir -p /app/logs /app/uploads /app/temp
 RUN chown -R dotnetuser:dotnetgroup /app
 RUN chmod -R 755 /app
 
-# Health check
+# Health check para Render.com
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:10000/health || exit 1
 
 # Usar usuário não-root
 USER dotnetuser

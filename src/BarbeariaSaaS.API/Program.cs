@@ -16,9 +16,34 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 
-// Database Configuration
+// Database Configuration - Support for multiple providers
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL"); // Render.com PostgreSQL
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        // Production - PostgreSQL (Render.com)
+        var uri = new Uri(databaseUrl);
+        var username = uri.UserInfo.Split(':')[0];
+        var password = uri.UserInfo.Split(':')[1];
+        var connectionStringBuilder = $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.Substring(1)};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        
+        options.UseNpgsql(connectionStringBuilder);
+    }
+    else if (connectionString?.Contains("localdb") == true || connectionString?.Contains("SqlServer") == true)
+    {
+        // Development - SQL Server
+        options.UseSqlServer(connectionString);
+    }
+    else
+    {
+        // Fallback - SQLite
+        var sqliteConnection = connectionString ?? "Data Source=barbearia.db";
+        options.UseSqlite(sqliteConnection);
+    }
+});
 
 // Repository Pattern
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -40,7 +65,7 @@ builder.Services.AddMediatR(typeof(BarbeariaSaaS.Application.Features.Auth.Comma
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key not configured");
+var secretKey = jwtSettings["SecretKey"] ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? throw new InvalidOperationException("JWT Secret Key not configured");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -55,8 +80,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
+        ValidIssuer = jwtSettings["Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "BarbeariaSaaS",
+        ValidAudience = jwtSettings["Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "BarbeariaSaaS-Users",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
@@ -65,12 +90,21 @@ builder.Services.AddAuthentication(options =>
 // Authorization
 builder.Services.AddAuthorization();
 
-// CORS
+// CORS - Allow frontend domains
+var allowedOrigins = new List<string> { "http://localhost:3000", "https://localhost:3001" };
+
+// Add production frontend URL if available
+var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+if (!string.IsNullOrEmpty(frontendUrl))
+{
+    allowedOrigins.Add(frontendUrl);
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "https://localhost:3001")
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -121,11 +155,25 @@ builder.Logging.AddDebug();
 
 var app = builder.Build();
 
-// Seed database
+// Migrate and Seed database
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await DatabaseSeeder.SeedAsync(context);
+    
+    try
+    {
+        // Ensure database is created and migrations are applied
+        await context.Database.MigrateAsync();
+        
+        // Seed data
+        await DatabaseSeeder.SeedAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        throw;
+    }
 }
 
 // Configure the HTTP request pipeline
@@ -136,6 +184,17 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "BarbeariaSaaS API v1");
         c.RoutePrefix = string.Empty; // Makes Swagger available at root URL
+    });
+}
+
+// Always enable Swagger in production for API documentation
+if (app.Environment.IsProduction())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "BarbeariaSaaS API v1");
+        c.RoutePrefix = "docs"; // Makes Swagger available at /docs
     });
 }
 
@@ -152,7 +211,8 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { 
     Status = "Healthy", 
     Timestamp = DateTime.UtcNow,
-    Environment = app.Environment.EnvironmentName 
+    Environment = app.Environment.EnvironmentName,
+    Database = Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "PostgreSQL" : "SQL Server/SQLite"
 }));
 
 app.Run();

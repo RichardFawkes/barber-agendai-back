@@ -1,0 +1,33 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: barbearia-saas-db
+    env: node
+    plan: free
+    region: oregon
+    databases:
+      - name: barbearia_saas
+        user: barbearia_user
+
+  # Web API Service  
+  - type: web
+    name: barbearia-saas-api
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS 
+        value: http://+:10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: barbearia-saas-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ISSUER
+        value: BarbeariaSaaS-Production
+      - key: JWT_AUDIENCE
+        value: BarbeariaSaaS-Users-Production 

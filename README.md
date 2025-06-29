@@ -5,13 +5,16 @@
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet)
 ![C#](https://img.shields.io/badge/C%23-12.0-239120?style=for-the-badge&logo=csharp)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-CC2927?style=for-the-badge&logo=microsoft-sql-server)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql)
 ![Entity Framework](https://img.shields.io/badge/Entity%20Framework-512BD4?style=for-the-badge&logo=microsoft)
 ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens)
 ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker)
+![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render)
 
 **API REST robusta e escalável para gestão completa de barbearias**
 
-[📖 Documentação](#-documentação) • [🚀 Instalação](#-instalação) • [🔧 Configuração](#-configuração) • [📡 API](#-endpoints-da-api) • [🤝 Contribuição](#-contribuição)
+[📖 Documentação](#-documentação) • [🚀 Instalação](#-instalação) • [🔧 Configuração](#-configuração) • [📡 API](#-endpoints-da-api) • [🌐 Deploy](#-deploy) • [🤝 Contribuição](#-contribuição)
 
 </div>
 
@@ -53,7 +56,9 @@ O projeto segue os princípios da **Clean Architecture** com as seguintes camada
 - **.NET 9** - Framework principal
 - **ASP.NET Core** - API REST
 - **Entity Framework Core** - ORM e acesso a dados
-- **SQL Server** - Banco de dados principal
+- **SQL Server** - Banco de dados (desenvolvimento)
+- **PostgreSQL** - Banco de dados (produção)
+- **SQLite** - Banco de dados (fallback)
 - **AutoMapper** - Mapeamento objeto-objeto
 - **MediatR** - Padrão CQRS e Mediator
 - **FluentValidation** - Validação de dados
@@ -63,8 +68,12 @@ O projeto segue os princípios da **Clean Architecture** com as seguintes camada
 - **BCrypt** - Hash de senhas seguro
 - **CORS** - Configuração para frontend
 
-#### **Documentação & Testes**
+#### **Deploy & DevOps**
+- **Docker** - Containerização
+- **Render.com** - Deploy em produção
 - **Swagger/OpenAPI** - Documentação interativa da API
+
+#### **Documentação & Testes**
 - **xUnit** - Framework de testes
 - **Serilog** - Sistema de logs estruturados
 
@@ -284,29 +293,48 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ---
 
-## 🚀 **Deploy**
+## 🌐 **Deploy**
 
-### **Docker (Recomendado)**
+### **🚀 Render.com (Recomendado)**
 
-```dockerfile
-# Dockerfile incluído no projeto
-docker build -t barbearia-saas-api .
-docker run -p 8080:8080 barbearia-saas-api
+Para deploy em produção no Render.com:
+
+```bash
+# 1. Criar banco PostgreSQL no Render.com
+# 2. Configurar variáveis de ambiente
+# 3. Deploy automático via GitHub
+
+# Ver guia completo:
 ```
 
-### **Azure App Service**
+📖 **[Guia Completo de Deploy no Render.com](docs/RENDER_DEPLOY.md)**
 
+### **🐳 Docker Local**
+
+```bash
+# Build e run local
+docker build -t barbearia-saas-api .
+docker run -p 10000:10000 barbearia-saas-api
+
+# Ou usar docker-compose
+docker-compose up -d
+```
+
+📖 **[Guia Completo do Docker](docs/DOCKER.md)**
+
+### **☁️ Outras Plataformas**
+
+#### **Azure App Service:**
 ```bash
 # Publicar para Azure
 dotnet publish -c Release -o ./publish
 # Deploy via Azure CLI ou Visual Studio
 ```
 
-### **IIS (Windows Server)**
-
+#### **AWS/Heroku:**
 ```bash
-# Publicar para pasta
-dotnet publish -c Release -o C:\inetpub\wwwroot\barbearia-api
+# Configurar para PostgreSQL e variáveis de ambiente
+# Deploy via container ou buildpack
 ```
 
 ---
@@ -316,8 +344,8 @@ dotnet publish -c Release -o C:\inetpub\wwwroot\barbearia-api
 ### **Health Checks**
 
 - **API Status**: `GET /health`
-- **Database**: `GET /health/db`  
-- **External Services**: `GET /health/external`
+- **Database**: Automático via EF Core
+- **External Services**: Configurável
 
 ### **Logs**
 
@@ -357,7 +385,11 @@ Os logs são estruturados usando **Serilog** e podem ser configurados para:
 │
 ├── 📁 tests/                     # Projetos de teste
 ├── 📁 docs/                      # Documentação adicional
+│   ├── 📄 RENDER_DEPLOY.md       # Guia de deploy Render.com
+│   └── 📄 DOCKER.md              # Guia Docker completo
 ├── 🐳 Dockerfile                 # Configuração Docker
+├── 🐳 docker-compose.yml         # Ambiente completo
+├── ⚙️ render.yaml                # Config para Render.com
 ├── 📋 .gitignore                 # Arquivos ignorados pelo Git
 └── 📖 README.md                  # Este arquivo
 ```
@@ -402,6 +434,7 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 - Comunidade **.NET** pela excelente documentação
 - Contribuidores do **Entity Framework Core**
+- **Render.com** pela plataforma de deploy gratuita
 - Mantenedores das bibliotecas open source utilizadas
 
 ---
@@ -409,6 +442,8 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 <div align="center">
 
 **⭐ Se este projeto te ajudou, deixe uma estrela!**
+
+**🚀 Deploy fácil no Render.com → [docs/RENDER_DEPLOY.md](docs/RENDER_DEPLOY.md)**
 
 Feito com ❤️ e ☕ por [Seu Nome](https://github.com/seu-usuario)
 
