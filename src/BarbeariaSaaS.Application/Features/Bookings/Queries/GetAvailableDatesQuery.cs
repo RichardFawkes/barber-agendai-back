@@ -3,8 +3,9 @@ using BarbeariaSaaS.Shared.DTOs.Response;
 
 namespace BarbeariaSaaS.Application.Features.Bookings.Queries;
 
-public record GetAvailableTimesQuery(
+public record GetAvailableDatesQuery(
     string Subdomain,
     Guid ServiceId,
-    string Date
-) : IRequest<AvailableTimesResponseDto>; 
+    int Year,
+    int Month
+) : IRequest<AvailableDatesResponseDto>; 

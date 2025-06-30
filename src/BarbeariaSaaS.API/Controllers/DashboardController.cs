@@ -21,6 +21,67 @@ public class DashboardController : ControllerBase
         _logger = logger;
     }
 
+    /*
+    /// <summary>
+    /// Get schedule overview for a specific date
+    /// </summary>
+    /// <param name="subdomain">Tenant subdomain</param>
+    /// <param name="date">Date in YYYY-MM-DD format (optional, defaults to today)</param>
+    /// <returns>Schedule overview with timeline and booking details</returns>
+    [HttpGet("{subdomain}/schedule-overview")]
+    [ProducesResponseType(typeof(ScheduleOverviewResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ScheduleOverviewResponseDto>> GetScheduleOverview(
+        string subdomain,
+        [FromQuery] string? date = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(subdomain))
+            {
+                return BadRequest(new { message = "Subdomain é obrigatório" });
+            }
+
+            // Parse date or use today as default
+            DateOnly targetDate;
+            if (string.IsNullOrWhiteSpace(date))
+            {
+                targetDate = DateOnly.FromDateTime(DateTime.Today);
+            }
+            else if (!DateOnly.TryParse(date, out targetDate))
+            {
+                return BadRequest(new { message = "Data deve estar no formato YYYY-MM-DD" });
+            }
+
+            // TODO: Implement GetScheduleOverviewQuery
+            var query = new GetScheduleOverviewQuery(subdomain, targetDate);
+            var result = await _mediator.Send(query);
+
+            if (!result.Success)
+            {
+                if (result.Error?.Code == "TENANT_NOT_FOUND")
+                    return NotFound(result);
+                if (result.Error?.Code == "UNAUTHORIZED")
+                    return Forbid();
+                return BadRequest(result);
+            }
+
+            _logger.LogInformation("Schedule overview retrieved for subdomain {Subdomain} on {Date}", 
+                subdomain, targetDate.ToString("yyyy-MM-dd"));
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting schedule overview for subdomain {Subdomain} on {Date}", 
+                subdomain, date);
+            return StatusCode(500, new { message = "Erro interno do servidor" });
+        }
+    }
+    */
+
     /// <summary>
     /// Get dashboard statistics for a tenant
     /// </summary>

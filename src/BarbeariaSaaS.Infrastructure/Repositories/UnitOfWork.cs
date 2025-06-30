@@ -19,6 +19,10 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ServiceCategory>? _serviceCategories;
     private IRepository<BusinessHour>? _businessHours;
     private IRepository<BarbeariaSaaS.Domain.Entities.File>? _files;
+    private IRepository<BusinessBreak>? _businessBreaks;
+    private IRepository<SpecialDay>? _specialDays;
+    private IRepository<ManualBlock>? _manualBlocks;
+    private IRepository<TenantSetting>? _tenantSettings;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -48,6 +52,18 @@ public class UnitOfWork : IUnitOfWork
 
     public IRepository<BarbeariaSaaS.Domain.Entities.File> Files =>
         _files ??= new Repository<BarbeariaSaaS.Domain.Entities.File>(_context);
+
+    public IRepository<BusinessBreak> BusinessBreaks =>
+        _businessBreaks ??= new Repository<BusinessBreak>(_context);
+
+    public IRepository<SpecialDay> SpecialDays =>
+        _specialDays ??= new Repository<SpecialDay>(_context);
+
+    public IRepository<ManualBlock> ManualBlocks =>
+        _manualBlocks ??= new Repository<ManualBlock>(_context);
+
+    public IRepository<TenantSetting> TenantSettings =>
+        _tenantSettings ??= new Repository<TenantSetting>(_context);
 
     public async Task<int> SaveChangesAsync()
     {

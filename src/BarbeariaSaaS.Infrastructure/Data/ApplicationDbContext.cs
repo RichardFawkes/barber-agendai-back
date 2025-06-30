@@ -18,6 +18,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<ServiceCategory> ServiceCategories { get; set; }
     public DbSet<BusinessHour> BusinessHours { get; set; }
     public DbSet<BarbeariaSaaS.Domain.Entities.File> Files { get; set; }
+    public DbSet<BusinessBreak> BusinessBreaks { get; set; }
+    public DbSet<SpecialDay> SpecialDays { get; set; }
+    public DbSet<ManualBlock> ManualBlocks { get; set; }
+    public DbSet<TenantSetting> TenantSettings { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -85,6 +89,26 @@ public class ApplicationDbContext : DbContext
                     v => JsonSerializer.Deserialize<TenantSettings>(v, (JsonSerializerOptions)null!)!)
                 .HasColumnName("SettingsJson")
                 .HasColumnType(databaseProvider?.Contains("SqlServer") == true ? "NVARCHAR(MAX)" : "TEXT");
+
+            entity.HasMany(t => t.BusinessBreaks)
+                .WithOne(b => b.Tenant)
+                .HasForeignKey(b => b.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(t => t.SpecialDays)
+                .WithOne(s => s.Tenant)
+                .HasForeignKey(s => s.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(t => t.ManualBlocks)
+                .WithOne(m => m.Tenant)
+                .HasForeignKey(m => m.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.TenantSetting)
+                .WithOne(ts => ts.Tenant)
+                .HasForeignKey<TenantSetting>(ts => ts.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // User configuration
@@ -310,6 +334,167 @@ public class ApplicationDbContext : DbContext
                 .WithMany(t => t.Files)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // BusinessBreak configuration
+        modelBuilder.Entity<BusinessBreak>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.StartTime).IsRequired().HasColumnType("TIME");
+            entity.Property(e => e.EndTime).IsRequired().HasColumnType("TIME");
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.AppliesToAllDays).HasDefaultValue(true);
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.BusinessBreaks)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.TenantId);
+            
+            // Check constraint
+            entity.HasCheckConstraint("CK_BusinessBreak_Time", "StartTime < EndTime");
+        });
+
+        // SpecialDay configuration
+        modelBuilder.Entity<SpecialDay>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Date).IsRequired().HasColumnType("DATE");
+            entity.Property(e => e.Type).HasConversion<int>().IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IsOpen).HasDefaultValue(false);
+            entity.Property(e => e.CustomStartTime).HasColumnType("TIME");
+            entity.Property(e => e.CustomEndTime).HasColumnType("TIME");
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.SpecialDays)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.Date }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Date });
+            entity.HasIndex(e => e.Date);
+            
+            // Check constraint for custom hours
+            entity.HasCheckConstraint("CK_SpecialDay_Hours", 
+                "(IsOpen = 0) OR (IsOpen = 1 AND CustomStartTime IS NOT NULL AND CustomEndTime IS NOT NULL AND CustomStartTime < CustomEndTime)");
+        });
+
+        // ManualBlock configuration
+        modelBuilder.Entity<ManualBlock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.Date).IsRequired().HasColumnType("DATE");
+            entity.Property(e => e.StartTime).HasColumnType("TIME");
+            entity.Property(e => e.EndTime).HasColumnType("TIME");
+            entity.Property(e => e.Type).HasConversion<int>().IsRequired();
+            entity.Property(e => e.Reason).IsRequired().HasMaxLength(255);
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            }
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.ManualBlocks)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.TenantId, e.Date });
+            entity.HasIndex(e => e.TenantId);
+            
+            // Check constraint for time blocks
+            entity.HasCheckConstraint("CK_ManualBlock_Type", 
+                "(Type = 2) OR (Type = 1 AND StartTime IS NOT NULL AND EndTime IS NOT NULL AND StartTime < EndTime)");
+        });
+
+        // TenantSetting configuration
+        modelBuilder.Entity<TenantSetting>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired();
+            entity.Property(e => e.SlotDurationMinutes).HasDefaultValue(30);
+            entity.Property(e => e.AdvanceBookingDays).HasDefaultValue(30);
+            entity.Property(e => e.MaxBookingsPerDay).HasDefaultValue(50);
+            entity.Property(e => e.BookingBufferMinutes).HasDefaultValue(0);
+            entity.Property(e => e.Timezone).HasMaxLength(50).HasDefaultValue("America/Sao_Paulo");
+            entity.Property(e => e.AutoConfirmBookings).HasDefaultValue(true);
+            
+            // Configure timestamps
+            if (databaseProvider?.Contains("SqlServer") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            }
+            else if (databaseProvider?.Contains("Npgsql") == true)
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
+            }
+            else
+            {
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+            }
+
+            entity.HasOne(e => e.Tenant)
+                .WithOne(t => t.TenantSetting)
+                .HasForeignKey<TenantSetting>(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.TenantId).IsUnique();
+            
+            // Check constraints for positive values
+            entity.HasCheckConstraint("CK_TenantSetting_SlotDuration", "SlotDurationMinutes > 0");
+            entity.HasCheckConstraint("CK_TenantSetting_AdvanceDays", "AdvanceBookingDays > 0");
+            entity.HasCheckConstraint("CK_TenantSetting_MaxBookings", "MaxBookingsPerDay > 0");
+            entity.HasCheckConstraint("CK_TenantSetting_Buffer", "BookingBufferMinutes >= 0");
         });
     }
 } 

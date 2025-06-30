@@ -47,6 +47,10 @@ public class Tenant
     public ICollection<BusinessHour> BusinessHours { get; set; } = new List<BusinessHour>();
     public ICollection<ServiceCategory> ServiceCategories { get; set; } = new List<ServiceCategory>();
     public ICollection<File> Files { get; set; } = new List<File>();
+    public ICollection<BusinessBreak> BusinessBreaks { get; set; } = new List<BusinessBreak>();
+    public ICollection<SpecialDay> SpecialDays { get; set; } = new List<SpecialDay>();
+    public ICollection<ManualBlock> ManualBlocks { get; set; } = new List<ManualBlock>();
+    public TenantSetting? TenantSetting { get; set; }
 }
 
 public enum TenantStatus
