@@ -5,15 +5,15 @@ namespace BarbeariaSaaS.Shared.DTOs.Request;
 public class UpdateBusinessHoursDto
 {
     [Required]
-    public List<BusinessHourDto> Schedule { get; set; } = new();
+    public List<BusinessHourConfigDto> Schedule { get; set; } = new();
     
     public List<BusinessBreakRequestDto> Breaks { get; set; } = new();
     
     [Required]
-    public TenantSettingsDto Settings { get; set; } = new();
+    public TenantSettingsRequestDto Settings { get; set; } = new();
 }
 
-public class BusinessHourDto
+public class BusinessHourConfigDto
 {
     [Required]
     [Range(0, 6, ErrorMessage = "DayOfWeek deve estar entre 0 (Domingo) e 6 (Sábado)")]
@@ -44,7 +44,7 @@ public class BusinessBreakRequestDto
     public bool AppliesToAllDays { get; set; } = true;
 }
 
-public class TenantSettingsDto
+public class TenantSettingsRequestDto
 {
     [Range(15, 240, ErrorMessage = "Duração do slot deve estar entre 15 e 240 minutos")]
     public int SlotDurationMinutes { get; set; } = 30;
