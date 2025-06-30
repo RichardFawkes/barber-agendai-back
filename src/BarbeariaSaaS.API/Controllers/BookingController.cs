@@ -5,6 +5,8 @@ using BarbeariaSaaS.Application.Features.Bookings.Commands;
 using BarbeariaSaaS.Application.Features.Bookings.Queries;
 using BarbeariaSaaS.Shared.DTOs.Request;
 using BarbeariaSaaS.Shared.DTOs.Response;
+using BarbeariaSaaS.Infrastructure.Data;
+using BarbeariaSaaS.API.Scripts;
 
 namespace BarbeariaSaaS.API.Controllers;
 
@@ -15,11 +17,30 @@ public class BookingController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<BookingController> _logger;
+    private readonly ApplicationDbContext _context;
 
-    public BookingController(IMediator mediator, ILogger<BookingController> logger)
+    public BookingController(IMediator mediator, ILogger<BookingController> logger, ApplicationDbContext context)
     {
         _mediator = mediator;
         _logger = logger;
+        _context = context;
+    }
+
+    /// <summary>
+    /// TEMPORARY: Seed test data
+    /// </summary>
+    [HttpPost("seed-test-data")]
+    public async Task<ActionResult> SeedTestDataEndpoint()
+    {
+        try
+        {
+            await Scripts.SeedTestData.SeedAsync(_context);
+            return Ok(new { message = "Dados de teste criados com sucesso!" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"Erro ao criar dados de teste: {ex.Message}" });
+        }
     }
 
     /// <summary>
