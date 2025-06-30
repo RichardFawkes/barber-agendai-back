@@ -1,5 +1,6 @@
 using MediatR;
 using BarbeariaSaaS.Shared.DTOs.Request;
+using BarbeariaSaaS.Shared.DTOs.Response;
 using BarbeariaSaaS.Application.Interfaces;
 using BarbeariaSaaS.Domain.Entities;
 using Microsoft.Extensions.Logging;
@@ -7,22 +8,9 @@ using System.Linq;
 
 namespace BarbeariaSaaS.Application.Features.Tenants.Commands;
 
-public class ResponseDto
-{
-    public bool Success { get; set; }
-    public object? Data { get; set; }
-    public ErrorDto? Error { get; set; }
-}
+public record UpdateBusinessHoursCommand(string Subdomain, UpdateBusinessHoursDto UpdateDto) : IRequest<BusinessHoursResponseDto>;
 
-public class ErrorDto
-{
-    public string Code { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-}
-
-public record UpdateBusinessHoursCommand(string Subdomain, UpdateBusinessHoursDto UpdateDto) : IRequest<ResponseDto>;
-
-public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessHoursCommand, ResponseDto>
+public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessHoursCommand, BusinessHoursResponseDto>
 {
     private readonly ITenantRepository _tenantRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -38,7 +26,7 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
         _logger = logger;
     }
 
-    public async Task<ResponseDto> Handle(UpdateBusinessHoursCommand request, CancellationToken cancellationToken)
+    public async Task<BusinessHoursResponseDto> Handle(UpdateBusinessHoursCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -49,7 +37,7 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
             if (tenant == null)
             {
                 _logger.LogWarning("Tenant not found for subdomain: {Subdomain}", request.Subdomain);
-                return new ResponseDto
+                return new BusinessHoursResponseDto
                 {
                     Success = false,
                     Error = new ErrorDto
@@ -107,13 +95,14 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
 
                 _logger.LogInformation("Business hours successfully updated for tenant {TenantId}", tenant.Id);
 
-                return new ResponseDto
+                return new BusinessHoursResponseDto
                 {
                     Success = true,
-                    Data = new { 
-                        message = "Horários de funcionamento atualizados com sucesso",
-                        tenantId = tenant.Id,
-                        savedHours = newBusinessHours.Count
+                    Data = new BusinessHoursDataDto
+                    { 
+                        Message = "Horários de funcionamento atualizados com sucesso",
+                        TenantId = tenant.Id.ToString(),
+                        SavedHours = newBusinessHours.Count
                     }
                 };
             }
@@ -122,7 +111,7 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
                 _logger.LogError(saveEx, "Error saving business hours for tenant {TenantId}: {Message}", 
                     tenant.Id, saveEx.Message);
                 
-                return new ResponseDto
+                return new BusinessHoursResponseDto
                 {
                     Success = false,
                     Error = new ErrorDto
@@ -138,7 +127,7 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
             _logger.LogError(ex, "Exception in business hours update for subdomain {Subdomain}: {Message}", 
                 request.Subdomain, ex.Message);
             
-            return new ResponseDto
+            return new BusinessHoursResponseDto
             {
                 Success = false,
                 Error = new ErrorDto

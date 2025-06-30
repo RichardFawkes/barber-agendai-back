@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BarbeariaSaaS.Shared.DTOs.Request;
+using BarbeariaSaaS.Shared.DTOs.Response;
 using BarbeariaSaaS.Application.Features.Tenants.Commands;
 
 namespace BarbeariaSaaS.API.Controllers;
@@ -28,7 +29,7 @@ public class TenantConfigurationController : ControllerBase
     /// <param name="updateDto">Business hours configuration</param>
     /// <returns>Update result</returns>
     [HttpPut("{subdomain}/business-hours")]
-    [ProducesResponseType(typeof(ResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BusinessHoursResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -233,20 +234,4 @@ public class TenantConfigurationController : ControllerBase
             return StatusCode(500, new { message = "Erro interno do servidor" });
         }
     }
-}
-
-// TODO: Implement these commands and queries later
-/*
-public record UpdateBusinessHoursCommand(string Subdomain, UpdateBusinessHoursDto UpdateDto) : IRequest<ResponseDto>;
-public record CreateSpecialDaysCommand(string Subdomain, CreateSpecialDaysDto CreateDto) : IRequest<ResponseDto>;
-public record CreateManualBlocksCommand(string Subdomain, CreateManualBlocksDto CreateDto) : IRequest<ResponseDto>;
-public record GetManualBlocksQuery(string Subdomain, DateOnly StartDate, DateOnly EndDate) : IRequest<ResponseDto>;
-public record DeleteManualBlockCommand(string Subdomain, Guid BlockId) : IRequest<ResponseDto>;
-
-public class ResponseDto
-{
-    public bool Success { get; set; }
-    public object? Data { get; set; }
-    public ErrorDto? Error { get; set; }
-}
-*/ 
+} 
