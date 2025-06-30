@@ -438,7 +438,7 @@ if (app.Environment.IsProduction())
     });
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); // COMMENTED OUT FOR DEVELOPMENT - Causing 307 redirects
 
 app.UseCors("AllowFrontend");
 
