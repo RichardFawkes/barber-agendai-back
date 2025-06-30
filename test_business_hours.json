@@ -1,0 +1,27 @@
+{
+  "schedule": [
+    {
+      "dayOfWeek": 1,
+      "dayName": "Monday",
+      "isOpen": true,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    {
+      "dayOfWeek": 2,
+      "dayName": "Tuesday",
+      "isOpen": true,
+      "startTime": "08:00",
+      "endTime": "18:00"
+    }
+  ],
+  "breaks": [],
+  "settings": {
+    "slotDurationMinutes": 30,
+    "advanceBookingDays": 30,
+    "maxBookingsPerDay": 50,
+    "bookingBufferMinutes": 0,
+    "timezone": "America/Sao_Paulo",
+    "autoConfirmBookings": true
+  }
+} 
