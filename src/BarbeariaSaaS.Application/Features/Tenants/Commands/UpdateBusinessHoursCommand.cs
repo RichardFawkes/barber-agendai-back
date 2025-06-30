@@ -100,40 +100,12 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
 
             _logger.LogInformation("Created {Count} new business hours", newBusinessHours.Count);
 
-            // Now let's try to save them
+            // Use the specialized method to update business hours
             try
             {
-                // Simple approach: Load tenant with business hours explicitly
-                var tenantForUpdate = await _tenantRepository.GetByIdAsync(tenant.Id);
-                if (tenantForUpdate == null)
-                {
-                    throw new InvalidOperationException("Tenant not found for update");
-                }
+                await _tenantRepository.UpdateBusinessHoursAsync(tenant.Id, newBusinessHours);
 
-                // Clear existing business hours using a simple loop
-                var existingHoursCount = tenantForUpdate.BusinessHours.Count;
-                var existingHoursList = tenantForUpdate.BusinessHours.ToList();
-                
-                foreach (var existingHour in existingHoursList)
-                {
-                    tenantForUpdate.BusinessHours.Remove(existingHour);
-                }
-                
-                _logger.LogInformation("Removed {Count} existing business hours", existingHoursCount);
-
-                // Add new business hours
-                foreach (var newHour in newBusinessHours)
-                {
-                    tenantForUpdate.BusinessHours.Add(newHour);
-                }
-                _logger.LogInformation("Added {Count} new business hours", newBusinessHours.Count);
-
-                // Update and save
-                tenantForUpdate.UpdatedAt = DateTime.UtcNow;
-                _tenantRepository.Update(tenantForUpdate);
-                await _unitOfWork.SaveChangesAsync();
-
-                _logger.LogInformation("Business hours successfully saved for tenant {TenantId}", tenant.Id);
+                _logger.LogInformation("Business hours successfully updated for tenant {TenantId}", tenant.Id);
 
                 return new ResponseDto
                 {
@@ -141,8 +113,7 @@ public class UpdateBusinessHoursCommandHandler : IRequestHandler<UpdateBusinessH
                     Data = new { 
                         message = "Horários de funcionamento atualizados com sucesso",
                         tenantId = tenant.Id,
-                        savedHours = newBusinessHours.Count,
-                        removedHours = existingHoursCount
+                        savedHours = newBusinessHours.Count
                     }
                 };
             }
