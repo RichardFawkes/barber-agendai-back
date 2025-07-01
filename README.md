@@ -476,9 +476,9 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 ## 👨‍💻 **Autor**
 
 **Seu Nome**
-- 🐙 GitHub: [@seu-usuario](https://github.com/seu-usuario)
-- 💼 LinkedIn: [Seu Perfil](https://linkedin.com/in/seu-perfil)
-- 📧 Email: seu.email@exemplo.com
+- 🐙 GitHub: [@RichardFawkes](https://github.com/RichardFawkes)
+- 💼 LinkedIn: [Seu Perfil](https://linkedin.com/in/richardfdev)
+- 📧 Email: richarddevelopers@gmail.com
 
 ---
 
@@ -497,6 +497,6 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 **🚀 Deploy fácil no Render.com → [docs/RENDER_DEPLOY.md](docs/RENDER_DEPLOY.md)**
 
-Feito com ❤️ e ☕ por [Seu Nome](https://github.com/seu-usuario)
+
 
 </div>
